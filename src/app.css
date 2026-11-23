@@ -1,0 +1,1666 @@
+@import "tailwindcss";
+/* The Ewe design system, version 3: the token layer and the component
+   classes, both authored in ewe/design/ and copied verbatim (check-tokens.sh
+   holds the copies to the source). Layered so that Tailwind's own theme
+   defaults sit below the tokens and a utility on an element can still adjust
+   an ewe-* class (margins, widths), never the other way round. */
+@import "./tokens.css" layer(base);
+@import "./components.css" layer(components);
+
+/* ── Tailwind's theme IS the token set ──────────────────────────────────────
+   Every scale Tailwind generates utilities from is reset and re-pointed at a
+   token, so `p-2`, `text-sm`, `rounded-lg` or `text-dim` can only land on an
+   Ewe value. The default palette, type ramp, radii and shadows are gone.
+   Spacing steps are multiples of space-xs (4px): p-1 = space-xs, p-2 =
+   space-s, p-4 = space-md, p-8 = space-lg. Type: text-xs = caption (11),
+   text-sm = body (13), text-base = 15, text-lg = 18, text-xl = 22. */
+@theme inline {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-fg: var(--text-primary);
+  --color-fg-2: var(--text-secondary);
+  --color-dim: var(--text-muted);
+  --color-disabled: var(--text-disabled);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-success-subtle: var(--success-subtle);
+  --color-info-subtle: var(--info-subtle);
+  --color-base: var(--surface-base);
+  --color-raised: var(--surface-raised);
+  --color-overlay: var(--surface-overlay);
+  --color-sunken: var(--surface-sunken);
+  --color-hover: var(--surface-hover);
+  --color-pressed: var(--surface-pressed);
+  --color-elevated: var(--surface-raised);
+  --color-hairline: var(--border-subtle);
+  --color-strong: var(--border-strong);
+  --color-focus: var(--focus-ring);
+
+  --spacing: var(--space-xs);
+
+  --text-*: initial;
+  --text-xs: var(--font-size-xs);
+  --text-xs--line-height: var(--line-height-xs);
+  --text-sm: var(--font-size-md);
+  --text-sm--line-height: var(--line-height-md);
+  --text-base: var(--font-size-lg);
+  --text-base--line-height: var(--line-height-lg);
+  --text-lg: var(--font-size-xl);
+  --text-lg--line-height: var(--line-height-xl);
+  --text-xl: var(--font-size-2xl);
+  --text-xl--line-height: var(--line-height-2xl);
+  --text-2xl: var(--font-size-3xl);
+  --text-2xl--line-height: var(--line-height-3xl);
+  --text-3xl: var(--font-size-4xl);
+  --text-3xl--line-height: var(--line-height-4xl);
+
+  --radius-*: initial;
+  --radius-xs: var(--slight);
+  --radius-sm: var(--slight);
+  --radius-md: var(--secondary);
+  --radius-lg: var(--primary);
+  --radius-xl: var(--rounded);
+  --radius-2xl: var(--rounded);
+
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+
+  --default-transition-duration: var(--dur-fast);
+  --default-transition-timing-function: var(--ease-out);
+}
+
+/* ── ground ─────────────────────────────────────────────────────────────── */
+html,
+body,
+#app {
+  height: 100%;
+}
+:root {
+  /* flipped to light by the theme runtime (lib/theme.js) with the scheme */
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-md);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  user-select: none;
+}
+input,
+textarea {
+  user-select: text;
+}
+code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-s);
+}
+/* keyboard focus on anything the ewe-* classes do not cover: the same 1px
+   focus-ring, 1px outside the edge */
+:where(button, [role="button"], [role="radio"], [role="switch"], a, select, [tabindex]):focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--border-width-1);
+}
+
+/* Geist and Geist Mono (OFL, assets/GEIST-LICENSE): the ewe faces, bundled
+   so the app never depends on the fonts the ewe dotfiles install. The same
+   variable files as the shell, ewe Sync and ewe Safe. */
+@font-face {
+  font-family: "Geist";
+  src: url("./assets/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("./assets/Geist-Italic-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("./assets/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("./assets/GeistMono-Italic-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: "lucide";
+  src: url("./assets/Lucide.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@keyframes ewe-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--space-xs)));
+  }
+}
+@keyframes ewe-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-xs));
+  }
+}
+@keyframes ewe-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(var(--space-xs));
+  }
+}
+@keyframes ewe-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ewe-scrim-in {
+  from {
+    background-color: transparent;
+  }
+}
+@keyframes toast-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* App rules sit in the components layer beside the ewe-* classes, so a
+   state class (.is-selected, :hover) still wins over a plain adjustment by
+   specificity, and a Tailwind utility on an element still wins over both. */
+@layer components {
+  /* ── icons: the Lucide font, sized by the ewe-icon box ──────────────────────
+     Lucide 1.40.0 (ISC, vendored in assets/). The shell draws the same glyphs
+     from the same font. Icon.svelte renders an .ewe-icon box (whose width and
+     height every component rule already sets) around the glyph; the box is a
+     size container, so the glyph always fills exactly the box it is given. */
+
+  .ewe-glyph {
+    container-type: size;
+    display: inline-grid;
+    place-items: center;
+    overflow: hidden;
+  }
+  .ewe-glyph > i {
+    font-family: "lucide";
+    font-style: normal;
+    font-weight: normal;
+    font-size: 100cqh;
+    line-height: 1;
+  }
+  .ewe-icon--xs {
+    width: var(--icon-xs);
+    height: var(--icon-xs);
+  }
+
+  /* ── app shell (App shell card): window, rail, pane ────────────────────── */
+  .ewe-appwin {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .ewe-appwin .ewe-sidenav {
+    flex: none;
+    overflow-y: auto;
+  }
+  .ewe-appwin__pane {
+    position: relative;
+    overflow: hidden;
+  }
+  .ewe-appwin__scroll {
+    overflow-y: auto;
+    padding: 0;
+  }
+  .ewe-sidenav__logo {
+    color: var(--text-primary);
+  }
+  .ewe-sidenav__group {
+    flex: 1 1 auto;
+  }
+  .ewe-navitem {
+    border: 0;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+  }
+  /* Below 720px of window width the rail collapses to icons (Side navigation). */
+  @media (max-width: 720px) {
+    .ewe-appwin .ewe-sidenav {
+      width: var(--control-2xl);
+      padding-inline: var(--space-xs);
+    }
+    .ewe-sidenav__name,
+    .ewe-navitem__label,
+    .ewe-sidenav__version,
+    .ewe-sidenav__note {
+      display: none;
+    }
+    .ewe-sidenav__brand,
+    .ewe-navitem {
+      justify-content: center;
+      padding-inline: 0;
+    }
+  }
+
+  /* ── the page (Settings page card) ─────────────────────────────────────── */
+  .page {
+    box-sizing: border-box;
+    /* content at most 720px (panel-lg + 5 × space-lg), left-aligned */
+    max-width: calc(var(--panel-lg) + 5 * var(--space-lg) + 2 * (var(--space-md) + var(--space-s)));
+    padding: 0 calc(var(--space-md) + var(--space-s)) var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+  }
+  .page > .ewe-headerbar {
+    padding-bottom: calc(var(--space-s) + var(--space-xs));
+  }
+  /* a group: overline section header, 8px, then its list well; 24px above */
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+    margin-top: calc(var(--space-md) - var(--space-s));
+  }
+  .page > .ewe-headerbar + .group,
+  .page > .ewe-headerbar + * {
+    margin-top: 0;
+  }
+  .group > .ewe-section {
+    min-height: var(--control-sm);
+  }
+  /* setting rows: descriptions explain the setting, so they wrap instead of
+     truncating (Georgian runs about 30% longer; Writing guide) */
+  .page .ewe-row__desc,
+  .page .ewe-row__title {
+    white-space: normal;
+  }
+  .page .ewe-row__trail {
+    color: var(--text-secondary);
+  }
+  .ewe-row__trail > .ewe-seg,
+  .ewe-row__trail > .ewe-select {
+    flex: none;
+  }
+  .ewe-row--block {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-s);
+  }
+  .ewe-row.is-dim .ewe-row__title,
+  .ewe-row.is-dim .ewe-row__desc,
+  .ewe-row.is-dim .ewe-slider__value {
+    color: var(--text-disabled);
+  }
+  .ewe-list > .ewe-row + .ewe-row,
+  .ewe-list > * + .ewe-row {
+    margin-top: var(--space-xxs);
+  }
+  /* explanatory text under a group (help right where it is: UX value 10) */
+  .note {
+    margin: 0;
+    padding: 0 var(--space-s);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+  }
+  /* a native <select> or <input> that is an .ewe-input box */
+  select.ewe-input {
+    appearance: auto;
+    cursor: pointer;
+  }
+
+  /* ── overlays: open motion (README "Motion": base, fade + 4px slide) ───── */
+
+  .ewe-menu[data-state="open"],
+  .ewe-popover[data-state="open"] {
+    animation: ewe-in-down var(--dur-base) var(--ease-out);
+  }
+  .ewe-menu[data-side="top"][data-state="open"] {
+    animation-name: ewe-in-up;
+  }
+  .ewe-sheet[data-state="open"] {
+    animation: ewe-in-left var(--dur-base) var(--ease-out);
+  }
+  /* Dialogs open in place, and a scrim fades its COLOUR, never its opacity:
+     WebKitGTK puts an opacity animation on a GPU layer and, when it ends,
+     sometimes presents one frame without the scrim and the dialog (Komble's
+     "Options blinks", 2026-10-11 — the same fix). */
+  .ewe-toast {
+    animation: ewe-in-up var(--dur-base) var(--ease-out);
+  }
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: var(--scrim);
+    animation: ewe-scrim-in var(--dur-base) var(--ease-out);
+  }
+  .ewe-menu,
+  .ewe-popover {
+    z-index: 50;
+    outline: none;
+  }
+  .ewe-menu {
+    max-height: var(--bits-select-content-available-height, calc(10 * var(--control-lg)));
+    overflow-y: auto;
+  }
+  .ewe-sheet.is-floating {
+    position: fixed;
+    top: var(--window-gap);
+    right: var(--window-gap);
+    bottom: var(--window-gap);
+    z-index: 45;
+    max-width: calc(100vw - 2 * var(--window-gap));
+  }
+  .ewe-sheet__body {
+    overflow-y: auto;
+  }
+  .ewe-dialog.is-floating {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 50;
+    transform: translate(-50%, -50%);
+    max-width: calc(100vw - 2 * var(--space-md));
+  }
+  .toasts {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--space-s) + var(--space-xs));
+    z-index: 60;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .toasts > .ewe-toast {
+    pointer-events: auto;
+    width: max-content;
+    max-width: min(var(--panel-lg), calc(100vw - 2 * var(--space-md)));
+  }
+  .ewe-toast__timer {
+    transform-origin: left;
+    width: 100%;
+  }
+
+  .ewe-toast__timer {
+    animation-name: toast-timer;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+  .ewe-toast:hover .ewe-toast__timer,
+  .ewe-toast:focus-within .ewe-toast__timer {
+    animation-play-state: paused;
+  }
+  .ewe-tooltip {
+    z-index: 70;
+  }
+
+  /* ── control details the cards leave to the build ───────────────────────── */
+  /* Icon button, destructive (Remove, Forget): the hover of a danger menu row */
+  .ewe-iconbtn.is-danger:hover:not(:disabled) {
+    background: var(--danger-subtle);
+    color: var(--danger);
+  }
+  /* Slider: bits-ui's root is a control-sm tall hit area around the track */
+  .slider-hit {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    height: var(--control-sm);
+    touch-action: none;
+    cursor: pointer;
+  }
+  .slider-hit .ewe-slider__track {
+    flex: 1;
+  }
+  .slider-hit .ewe-slider__fill {
+    width: auto;
+  }
+  .slider-hit .ewe-slider__thumb {
+    transform: translateY(-50%);
+  }
+  .slider-hit[data-disabled] {
+    cursor: not-allowed;
+  }
+  .slider-hit[data-disabled] .ewe-slider__fill,
+  .slider-hit[data-disabled] .ewe-slider__thumb {
+    background: var(--text-disabled);
+  }
+  .slider-trail {
+    width: calc(8 * var(--control-md));
+  }
+  .slider-value {
+    white-space: nowrap;
+  }
+  /* Select trigger in a row: sized to its value, never narrower than a word */
+  .select-trigger {
+    min-width: calc(4 * var(--control-md));
+    max-width: calc(10 * var(--control-md));
+  }
+  .kv-value {
+    min-width: 0;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .kv-row {
+    min-height: var(--control-md);
+  }
+  .kv-row .ewe-row__text {
+    flex: none;
+  }
+  .kv-row .ewe-row__trail {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+  .ewe-sidenav__logo {
+    display: inline-flex;
+  }
+  .ewe-sidenav__logo > svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+  .ewe-sidenav__note {
+    margin: 0;
+    padding: var(--space-xs) var(--space-s);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--warning);
+  }
+  .error-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+@layer components {
+  /* inside the pane, cards sit on surface-overlay like lists (App shell) */
+  .ewe-appwin__pane .ewe-card {
+    background: var(--surface-overlay);
+  }
+  .ewe-appwin__pane .ewe-card--interactive:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+  .ewe-appwin__pane .ewe-card.is-selected {
+    background: var(--accent-subtle);
+  }
+}
+
+@layer components {
+  /* ── ewe Mobile ───────────────────────────────────────────────────────────
+     Everything below is this app's own layout, built from the same tokens as
+     the ewe-* classes above it. Sizes are sums and multiples of tokens; the
+     only bare lengths are the two widths in @media / @container conditions,
+     which cannot read a custom property. */
+
+  /* ── what fills the pane ─────────────────────────────────────────────── */
+  /* the pane is a column: banners keep their height, one of these takes the
+     rest and scrolls inside itself */
+  .scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .center {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-s);
+    padding: var(--space-md);
+    color: var(--text-secondary);
+  }
+  .center__text {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+  }
+  .ewe-appwin__pane > .ewe-alert--banner {
+    flex: none;
+  }
+  .ewe-appwin__pane > .ewe-alert--banner .ewe-alert__body {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: var(--space-s);
+  }
+  .page--wide {
+    max-width: calc(2 * var(--panel-lg) + 2 * (var(--space-md) + var(--space-s)));
+  }
+  .page--center {
+    max-width: none;
+    min-height: 100%;
+    align-items: center;
+    justify-content: center;
+    padding-top: var(--space-lg);
+  }
+  .page > .ewe-empty {
+    margin-top: var(--space-lg);
+  }
+  .is-strong {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+  }
+  /* a section header written without the text wrapper: the name takes the
+     room, the header's one action sits at the far end */
+  .ewe-section > .ewe-section__title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+  /* a list row that is one button; a glance, so one line each */
+  .rowbtn {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+  }
+  .page .rowbtn .ewe-row__title,
+  .page .rowbtn .ewe-row__desc {
+    white-space: nowrap;
+  }
+  .ewe-list > .ewe-empty {
+    align-self: center;
+  }
+
+  /* ── the rail: the phone in use ──────────────────────────────────────── */
+  .plate {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    width: 100%;
+    min-height: var(--control-2xl);
+    box-sizing: border-box;
+    padding: var(--space-xs) var(--space-s);
+    border: var(--border-width-1) solid var(--border-subtle);
+    border-radius: var(--primary);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .plate:hover {
+    background: var(--surface-hover);
+  }
+  .plate.is-selected {
+    background: var(--accent-subtle);
+    border-color: transparent;
+  }
+  .plate__glyph {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--control-lg);
+    height: var(--control-lg);
+    border-radius: var(--secondary);
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+  .plate.is-selected .plate__glyph {
+    color: var(--accent-text);
+  }
+  .plate__glyph .ewe-icon {
+    width: var(--icon-md);
+    height: var(--icon-md);
+  }
+  .plate__glyph .ewe-avatar__status {
+    width: var(--space-s);
+    height: var(--space-s);
+    right: calc(-1 * var(--space-xxs));
+    bottom: calc(-1 * var(--space-xxs));
+  }
+  .plate__text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .plate__name {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    font-weight: var(--font-weight-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .plate__state {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nav-count {
+    margin-left: auto;
+    flex: none;
+  }
+  @media (max-width: 720px) {
+    .plate {
+      justify-content: center;
+      padding: var(--space-xs);
+      border-color: transparent;
+      background: transparent;
+    }
+    .plate__text {
+      display: none;
+    }
+    .ewe-navitem {
+      position: relative;
+    }
+    .nav-count {
+      position: absolute;
+      top: calc(-1 * var(--space-xxs));
+      right: calc(-1 * var(--space-xxs));
+    }
+  }
+
+  /* ── faces ───────────────────────────────────────────────────────────── */
+  .avatar {
+    overflow: hidden;
+  }
+  .avatar__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+  }
+  .appicon {
+    width: var(--control-lg);
+    height: var(--control-lg);
+    border-radius: var(--primary);
+    object-fit: contain;
+    flex: none;
+  }
+  .cover {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    object-fit: cover;
+    border-radius: var(--primary);
+    background: var(--surface-hover);
+    color: var(--text-muted);
+  }
+  .cover--sm {
+    width: var(--control-xl);
+    height: var(--control-xl);
+  }
+  .cover--lg {
+    width: calc(5 * var(--control-2xl));
+    height: calc(5 * var(--control-2xl));
+    max-width: 100%;
+    border-radius: var(--rounded);
+    box-shadow: var(--shadow-float);
+  }
+  .cover--lg.cover--none .ewe-icon {
+    width: var(--icon-4xl);
+    height: var(--icon-4xl);
+  }
+
+  /* ── Phone: the device at a glance ───────────────────────────────────── */
+  .hero {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    padding: calc(var(--space-md) + var(--space-s)) 0 var(--space-s);
+  }
+  .hero__glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--icon-4xl);
+    height: var(--icon-4xl);
+    border-radius: var(--rounded);
+    background: var(--accent-subtle);
+    color: var(--accent-text);
+  }
+  .hero__glyph .ewe-icon {
+    width: var(--icon-2xl);
+    height: var(--icon-2xl);
+  }
+  .hero__text {
+    flex: 1;
+    min-width: calc(6 * var(--control-md));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  .hero__name {
+    margin: 0;
+    font-size: var(--font-size-2xl);
+    line-height: var(--line-height-2xl);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-tight);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hero__state {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-s);
+    font-size: var(--font-size-s);
+    line-height: var(--line-height-s);
+    color: var(--text-secondary);
+  }
+  .hero__fact {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+  .hero__fact .ewe-icon {
+    width: var(--icon-sm);
+    height: var(--icon-sm);
+  }
+  .hero__battery {
+    flex: none;
+    width: calc(6 * var(--control-md));
+  }
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(7 * var(--control-md)), 1fr));
+    gap: var(--space-s);
+  }
+  .tile {
+    flex-direction: row;
+    align-items: center;
+    font: inherit;
+    text-align: left;
+  }
+  .tile:disabled {
+    cursor: not-allowed;
+    color: var(--text-disabled);
+  }
+  .tile:disabled .tile__desc,
+  .tile:disabled .ewe-card__icon {
+    color: var(--text-disabled);
+  }
+  .tile__text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .tile__title {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    font-weight: var(--font-weight-medium);
+  }
+  .tile__desc {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+  }
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(calc(10 * var(--control-md)), 1fr));
+    column-gap: var(--space-md);
+    align-items: start;
+  }
+  .columns > .group {
+    min-width: 0;
+  }
+
+  /* ── two panes: a list and what is chosen from it ────────────────────── */
+  .split {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    container: split / inline-size;
+  }
+  .split__list {
+    flex: none;
+    width: calc(11 * var(--control-md));
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: var(--border-width-1) solid var(--border-subtle);
+  }
+  .split__scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xxs);
+    padding: 0 var(--space-s) var(--space-s);
+  }
+  .split__detail {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .listhead {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-md) var(--space-s) var(--space-s) var(--space-md);
+  }
+  .listhead__title {
+    flex: 1;
+    margin: 0;
+    font-size: var(--font-size-xl);
+    line-height: var(--line-height-xl);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-snug);
+  }
+  .listhead__search {
+    margin: 0 var(--space-s) var(--space-s);
+  }
+  .ewe-input > input,
+  .ewe-input > textarea {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+  .listnote {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-md) var(--space-s);
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    color: var(--text-muted);
+  }
+  .listfoot {
+    flex: none;
+    padding: var(--space-xs) var(--space-md);
+    border-top: var(--border-width-1) solid var(--border-subtle);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .letter {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: var(--space-xs) var(--space-s);
+    background: var(--surface-raised);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-muted);
+  }
+  /* one conversation, or one person, in the list */
+  .thread {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--space-s) + var(--space-xs));
+    width: 100%;
+    box-sizing: border-box;
+    min-height: calc(var(--control-2xl) + var(--space-s));
+    padding: var(--space-xs) var(--space-s);
+    border: 0;
+    border-radius: var(--primary);
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .thread:hover {
+    background: var(--surface-hover);
+  }
+  .thread:active {
+    background: var(--surface-pressed);
+  }
+  .thread.is-selected {
+    background: var(--accent-subtle);
+  }
+  .thread--one {
+    min-height: var(--control-xl);
+    gap: var(--space-s);
+  }
+  .thread__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xxs);
+  }
+  .thread__top,
+  .thread__bottom {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-s);
+  }
+  .thread__bottom {
+    align-items: center;
+  }
+  .thread__name {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    font-weight: var(--font-weight-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .thread__time {
+    flex: none;
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .thread__snippet {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--font-size-s);
+    line-height: var(--line-height-s);
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .thread__snippet.is-strong {
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* ── the open conversation ───────────────────────────────────────────── */
+  .convhead {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    min-height: calc(var(--control-2xl) + var(--space-s));
+    box-sizing: border-box;
+    padding: var(--space-xs) var(--space-md);
+    border-bottom: var(--border-width-1) solid var(--border-subtle);
+  }
+  .convhead--bare {
+    min-height: 0;
+    padding: var(--space-s) var(--space-s) 0;
+    border-bottom: 0;
+  }
+  .convhead__back {
+    display: none;
+  }
+  .convhead__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .convhead__name {
+    font-size: var(--font-size-lg);
+    line-height: var(--line-height-lg);
+    font-weight: var(--font-weight-semibold);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .convhead__sub {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .conv {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xxs);
+    padding: var(--space-md);
+  }
+  /* short threads sit at the bottom, by the box you type in */
+  .conv > :first-child {
+    margin-top: auto;
+  }
+  .conv__note {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-s);
+    font-size: var(--font-size-s);
+    line-height: var(--line-height-s);
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .conv__more {
+    align-self: center;
+    flex: none;
+  }
+  .conv__day {
+    align-self: center;
+    padding: var(--space-md) 0 var(--space-s);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-muted);
+  }
+  .msg {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xxs);
+    max-width: 100%;
+  }
+  .msg--out {
+    align-items: flex-end;
+  }
+  .msg--first {
+    margin-top: var(--space-s);
+  }
+  .msg__who {
+    padding: 0 var(--space-s);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+  }
+  .msg__meta {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-s);
+    padding: 0 var(--space-xs);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .msg__meta.is-danger {
+    color: var(--danger);
+  }
+  .msg__act {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--accent-text);
+    font: inherit;
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+  }
+  .msg__act:hover {
+    text-decoration: underline;
+  }
+  .bubble {
+    --bubble-radius: calc(var(--rounded) + var(--space-xs));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    box-sizing: border-box;
+    max-width: min(76%, var(--panel-lg));
+    padding: var(--space-s) calc(var(--space-s) + var(--space-xs));
+    border: var(--border-width-1) solid var(--border-subtle);
+    border-radius: var(--bubble-radius);
+    background: var(--surface-overlay);
+    color: var(--text-primary);
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-lg);
+  }
+  /* the corner by the edge is tight inside a turn, round at its ends */
+  .msg:not(.msg--first) .bubble {
+    border-top-left-radius: var(--slight);
+  }
+  .msg:not(.msg--last) .bubble {
+    border-bottom-left-radius: var(--slight);
+  }
+  .msg--out .bubble {
+    border-color: transparent;
+    background: var(--accent-subtle);
+  }
+  .msg--out:not(.msg--first) .bubble {
+    border-top-left-radius: var(--bubble-radius);
+    border-top-right-radius: var(--slight);
+  }
+  .msg--out:not(.msg--last) .bubble {
+    border-bottom-left-radius: var(--bubble-radius);
+    border-bottom-right-radius: var(--slight);
+  }
+  .bubble--pending {
+    opacity: var(--opacity-glass);
+  }
+  /* after the side's own colours: a message that did not go says so */
+  .msg .bubble.bubble--failed {
+    border-color: var(--danger);
+    background: var(--danger-subtle);
+    opacity: var(--opacity-solid);
+  }
+  .bubble__text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    user-select: text;
+  }
+  .bubble__link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: var(--space-xxs);
+    cursor: pointer;
+  }
+  .bubble__link:hover {
+    text-decoration-color: currentColor;
+  }
+  .bubble__media {
+    display: block;
+    padding: 0;
+    border: 0;
+    border-radius: var(--secondary);
+    background: transparent;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .bubble__media img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(5 * var(--control-2xl));
+    border-radius: inherit;
+  }
+  .bubble__file {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent-text);
+    font: inherit;
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+  }
+  .bubble__media:disabled,
+  .bubble__file:disabled {
+    cursor: default;
+  }
+  .composer {
+    flex: none;
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-s);
+    padding: var(--space-s) var(--space-md) var(--space-md);
+  }
+  .composer__field {
+    flex: 1;
+    height: auto;
+    min-height: var(--control-lg);
+    padding: calc((var(--control-lg) - var(--line-height-lg)) / 2 - var(--border-width-1)) calc(var(--space-s) + var(--space-xs));
+    border-radius: calc(var(--control-lg) / 2);
+    align-items: flex-end;
+  }
+  .composer__field > textarea {
+    resize: none;
+    line-height: var(--line-height-lg);
+    max-height: calc(6 * var(--line-height-lg));
+    overflow-y: auto;
+  }
+  .composer .ewe-iconbtn {
+    border-radius: var(--fully-rounded);
+  }
+  .composer__count {
+    flex-basis: 100%;
+    padding: 0 calc(var(--space-s) + var(--space-xs));
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+  }
+
+  /* one pane at a time when the window is a narrow tile */
+  @container split (max-width: 640px) {
+    .split__list {
+      flex: 1;
+      width: auto;
+      border-right: 0;
+    }
+    .split__detail {
+      display: none;
+    }
+    .split.is-detail .split__list {
+      display: none;
+    }
+    .split.is-detail .split__detail {
+      display: flex;
+    }
+    .convhead__back {
+      display: inline-flex;
+    }
+    .convhead {
+      padding-left: var(--space-s);
+    }
+  }
+
+  /* ── New message ─────────────────────────────────────────────────────── */
+  .picker {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--space-s) + var(--space-xs));
+    width: calc(var(--panel-md) + var(--space-md));
+    max-height: min(calc(18 * var(--control-md)), calc(100vh - 2 * var(--space-lg)));
+  }
+  .picker__list {
+    flex: 1;
+    min-height: calc(4 * var(--control-xl));
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xxs);
+    margin: 0 calc(-1 * var(--space-s));
+  }
+  .picker__row {
+    flex: none;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+  }
+  .picker__none {
+    padding: var(--space-md) var(--space-s);
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    color: var(--text-muted);
+  }
+
+  /* ── one person ──────────────────────────────────────────────────────── */
+  .person {
+    box-sizing: border-box;
+    max-width: calc(var(--panel-lg) + 2 * var(--space-lg));
+    margin: 0 auto;
+    padding: var(--space-md) var(--space-lg) var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-s);
+  }
+  .person__name {
+    margin: var(--space-s) 0 0;
+    font-size: var(--font-size-2xl);
+    line-height: var(--line-height-2xl);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-tight);
+    text-align: center;
+    overflow-wrap: anywhere;
+    user-select: text;
+  }
+  .person__org {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    color: var(--text-secondary);
+  }
+  .person__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-s);
+    margin: var(--space-s) 0;
+  }
+  .person__group {
+    align-self: stretch;
+  }
+  .person__number {
+    font-variant-numeric: tabular-nums;
+    user-select: text;
+  }
+  .person__note {
+    margin: 0;
+    padding: 0 var(--space-s);
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-lg);
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    user-select: text;
+  }
+
+  /* ── Notifications ───────────────────────────────────────────────────── */
+  .apphead {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-s);
+    margin: 0;
+  }
+  .apphead__icon {
+    width: var(--icon-md);
+    height: var(--icon-md);
+    border-radius: var(--slight);
+    object-fit: contain;
+  }
+  .note-row + .note-row {
+    margin-top: var(--space-xxs);
+  }
+  .note-row .ewe-row {
+    align-items: flex-start;
+  }
+  .note-row .ewe-row__title {
+    white-space: normal;
+    font-weight: var(--font-weight-medium);
+  }
+  .note-row__text {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+    user-select: text;
+    /* a long notification shows its start; the phone has the rest */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+  }
+  .note-row__reply {
+    display: flex;
+    gap: var(--space-s);
+    padding: 0 var(--space-s) var(--space-s);
+  }
+  .note-row__field {
+    flex: 1;
+  }
+  .quiet-toggle {
+    align-self: flex-start;
+    color: var(--text-secondary);
+  }
+
+  /* ── Media ───────────────────────────────────────────────────────────── */
+  .player {
+    width: 100%;
+    max-width: var(--panel-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding-bottom: var(--space-lg);
+  }
+  .player__titles {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    text-align: center;
+  }
+  .player__title {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    line-height: var(--line-height-xl);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-snug);
+    overflow-wrap: anywhere;
+  }
+  .player__by {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+  .player__seek,
+  .player__volume {
+    align-self: stretch;
+  }
+  .player__times {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .player__buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+  .player__players {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .player__source {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+  }
+
+  /* ── Files ───────────────────────────────────────────────────────────── */
+  .dropzone {
+    width: 100%;
+    font: inherit;
+    cursor: pointer;
+  }
+  .dropzone:disabled {
+    cursor: not-allowed;
+    color: var(--text-disabled);
+  }
+  .dropzone:disabled .ewe-drop__title,
+  .dropzone:disabled .ewe-drop__hint {
+    color: var(--text-disabled);
+  }
+  .sendline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-s);
+  }
+  .sendline__field {
+    flex: 1;
+    min-width: calc(6 * var(--control-md));
+  }
+  /* files dragged over the window: the whole pane is the target */
+  .dropveil {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    padding: var(--space-md);
+    background: var(--scrim);
+    animation: ewe-scrim-in var(--dur-fast) var(--ease-out);
+  }
+  .dropveil > .ewe-drop {
+    flex: 1;
+  }
+
+  /* ── Remote ──────────────────────────────────────────────────────────── */
+  .pad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    box-sizing: border-box;
+    min-height: calc(6 * var(--control-2xl));
+    padding: var(--space-md);
+    border: var(--border-width-1) solid var(--border-strong);
+    border-radius: var(--rounded);
+    background: var(--surface-sunken);
+    color: var(--text-secondary);
+    text-align: center;
+    cursor: grab;
+    touch-action: none;
+    transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .pad > .ewe-icon {
+    width: var(--icon-xl);
+    height: var(--icon-xl);
+    color: var(--text-muted);
+    margin-bottom: var(--space-xs);
+  }
+  .pad.is-held {
+    cursor: grabbing;
+    border-color: var(--focus-ring);
+    background: var(--accent-subtle);
+  }
+  .pad.is-held > .ewe-icon {
+    color: var(--accent-text);
+  }
+  .pad.is-disabled,
+  .keys.is-disabled {
+    cursor: not-allowed;
+    border-color: var(--border-subtle);
+    color: var(--text-disabled);
+  }
+  .pad.is-disabled .pad__title,
+  .pad.is-disabled > .ewe-icon {
+    color: var(--text-disabled);
+  }
+  .pad__title {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+  }
+  .pad__hint {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    color: var(--text-muted);
+  }
+  .keys {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    box-sizing: border-box;
+    min-height: var(--control-2xl);
+    padding: 0 var(--space-md);
+    border: var(--border-width-1) solid var(--border-strong);
+    border-radius: var(--primary);
+    background: var(--surface-sunken);
+    color: var(--text-secondary);
+    cursor: text;
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .keys:focus-visible,
+  .keys.is-typing {
+    outline: none;
+    border-color: var(--focus-ring);
+  }
+  .keys__echo {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+    color: var(--text-primary);
+    white-space: pre;
+    overflow: hidden;
+  }
+  .keys__hint {
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
+  }
+
+  /* ── Devices ─────────────────────────────────────────────────────────── */
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-s);
+    padding: var(--space-lg) 0 var(--space-s);
+  }
+  .welcome__mark {
+    display: inline-flex;
+    width: var(--icon-3xl);
+    height: var(--icon-3xl);
+    color: var(--text-primary);
+  }
+  .welcome__mark > svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+  .welcome__title {
+    margin: var(--space-s) 0 0;
+    font-size: var(--font-size-3xl);
+    line-height: var(--line-height-3xl);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-tighter);
+  }
+  .welcome__desc {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    line-height: var(--line-height-lg-relaxed);
+    color: var(--text-secondary);
+  }
+  .welcome__steps {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--space-s) + var(--space-xs));
+    margin: var(--space-md) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .welcome__steps .ewe-step {
+    align-items: flex-start;
+    white-space: normal;
+  }
+  .welcome__steps .ewe-step__dot {
+    flex: none;
+    background: var(--accent-subtle);
+    border-color: transparent;
+    color: var(--accent-text);
+  }
+  .pairline {
+    white-space: normal;
+  }
+  .pairkey {
+    padding: 0 var(--space-xs);
+    border-radius: var(--slight);
+    background: var(--surface-hover);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+  }
+  .rename {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+  }
+  .rename__field {
+    flex: 1;
+  }
+}
+

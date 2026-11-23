@@ -1,0 +1,63 @@
+# Build the Arch package for every version tag and attach it to a GitHub
+# release; the [ewe] repository's publish workflow downloads that
+# .pkg.tar.zst (same flow as ewe Sync, Komble and ewe Settings).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Build Arch package
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            git nodejs npm rust openssl pkgconf github-cli \
+            webkit2gtk-4.1 gtk3 librsvg
+
+      - name: Check out the tag
+        uses: actions/checkout@v4
+
+      - name: Build the package with makepkg
+        run: |
+          pkgver="${GITHUB_REF_NAME#v}"
+          # A git tag may carry a pre-release suffix (v0.1.0-beta); an Arch
+          # pkgver may not contain a hyphen. Strip it: 0.1.0-beta ->
+          # 0.1.0beta, which is also the ONLY form that vercmp sorts BELOW
+          # the eventual 0.1.0 (0.1.0_beta and 0.1.0.beta both sort above
+          # it, which would strand everyone on the beta).
+          pkgver="${pkgver//-/}"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          # The source tarball IS this checkout — no network fetch, no
+          # checksum chicken-and-egg. The versions are written INTO the
+          # PKGBUILD: computing them only in the shell leaves makepkg
+          # building whatever pkgver the file was committed with. The local
+          # tarball below is only picked up instead of the download when its
+          # name matches.
+          sed -i "s/^_tag=.*/_tag=$GITHUB_REF_NAME/" PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=$pkgver/" PKGBUILD
+          grep -E '^(_tag|pkgver)=' PKGBUILD
+          git archive --format=tar.gz --prefix="ewe-mobile-${GITHUB_REF_NAME#v}/" \
+            -o "ewe-mobile-$pkgver.tar.gz" HEAD
+          useradd -m builder
+          chown -R builder: .
+          # -d: kdeconnect is a run-time dependency, not needed to build
+          su builder -c "makepkg -d --noconfirm --skipchecksums"
+
+      - name: Attach the package to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # a tag carrying -alpha/-beta is not "Latest"
+          pre=""; case "$GITHUB_REF_NAME" in *-alpha*|*-beta*) pre="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" $pre \
+            --title "$GITHUB_REF_NAME" --generate-notes *.pkg.tar.zst \
+          || gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+               --clobber *.pkg.tar.zst

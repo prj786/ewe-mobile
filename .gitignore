@@ -1,0 +1,12 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# real `ewe-theme show` output for screenshots (machine-specific)
+.dev-mock/theme-*.json
+
+# makepkg output
+pkg/
+*.pkg.tar.*
+*.tar.gz

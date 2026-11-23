@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=ewe Mobile
+GenericName=Phone
+Comment=Your phone on your desktop: messages, contacts, notifications, media and files
+Exec=ewe-mobile
+Icon=io.github.prj786.ewe-mobile
+Terminal=false
+Categories=Utility;
+Keywords=phone;mobile;android;sms;messages;contacts;notifications;kde connect;kdeconnect;ewe;ewe-mobile;
+StartupWMClass=ewe-mobile
