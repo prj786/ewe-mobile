@@ -391,9 +391,12 @@ pub async fn notifications_of(bus: &Bus, device: &str) -> Result<Vec<Json>, Stri
         } else {
             tools::picture_file(Path::new(&icon_path), 512 * 1024)
         };
+        // `0|com.whatsapp|…`: the phone app's package is the second field
+        let package = notification_package(&text("internalId"));
         out.push(json!({
             "id": id,
             "app": text("appName"),
+            "package": package,
             "title": text("title"),
             "text": text("text"),
             "ticker": text("ticker"),
@@ -445,6 +448,18 @@ pub async fn notification_reply(
         )
         .await
         .map(|_| ())
+}
+
+/// The package in a notification's `internalId` (`0|com.whatsapp|64278|…`),
+/// "" when there is none: the Notifications page draws the app's icon from
+/// the apps cache by it (C2), never a letter.
+pub fn notification_package(internal_id: &str) -> String {
+    internal_id
+        .split('|')
+        .nth(1)
+        .filter(|p| crate::apps::package_ok(p))
+        .unwrap_or("")
+        .to_string()
 }
 
 // ── messages (SMS / MMS) ────────────────────────────────────────────────────
@@ -1229,6 +1244,18 @@ pub async fn open_link(url: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_package_of_a_notification() {
+        assert_eq!(
+            notification_package("0|com.instagram.android|64278|direct|1523925756;thread_id:3"),
+            "com.instagram.android"
+        );
+        assert_eq!(notification_package("0|com.whatsapp|1"), "com.whatsapp");
+        assert_eq!(notification_package("0|../etc|1"), "");
+        assert_eq!(notification_package("plain"), "");
+        assert_eq!(notification_package(""), "");
+    }
 
     #[test]
     fn a_message_from_the_wire() {

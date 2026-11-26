@@ -78,6 +78,11 @@ pub fn event_for(iface: &str, member: &str, path: &str, args: &[Json]) -> Option
             json!({ "kind": "contacts", "device": device })
         }
         ("device.mprisremote", _) => json!({ "kind": "media", "device": device }),
+        // the phone's apps list (C1): the bytes come along, the sink writes
+        // the cache and the page asks for the rows
+        ("device.remotecommands", "commandsChanged") => {
+            json!({ "kind": "apps", "device": device })
+        }
         ("device.telephony", "callReceived") => json!({
             "kind": "call",
             "device": device,
@@ -160,6 +165,27 @@ pub async fn pump(bus: Bus, mut sink: impl FnMut(Json)) -> zbus::Result<()> {
     Ok(())
 }
 
+/// After a change: write this phone's apps cache and entries when it is in
+/// reach, and drop what is kept for phones that are no longer paired.
+pub async fn housekeep(bus: &Bus, device: &str) {
+    let Ok(list) = kdc::devices_of(bus).await else {
+        return;
+    };
+    let paired: Vec<String> = list
+        .iter()
+        .filter(|d| d["paired"] == true)
+        .filter_map(|d| d["id"].as_str().map(String::from))
+        .collect();
+    crate::apps::prune(&paired);
+    if let Some(d) = list
+        .iter()
+        .find(|d| d["id"] == device && d["paired"] == true && d["reachable"] == true)
+    {
+        let name = d["name"].as_str().unwrap_or("");
+        crate::apps::sync(bus, device, name, true).await;
+    }
+}
+
 /// The daemon coming and going (first start, a crash, an update).
 async fn owner(app: AppHandle, bus: Bus) -> zbus::Result<()> {
     let dbus = zbus::fdo::DBusProxy::new(bus.conn()).await?;
@@ -192,9 +218,17 @@ pub fn start(app: AppHandle) {
                 eprintln!("ewe-mobile: daemon watch ended: {e}");
             }
         });
+        let keeper = bus.clone();
         let sink = |ev: Json| {
             // a file the daemon saved is one the page may open (kdc::open_file)
             let kind = ev["kind"].as_str().unwrap_or("");
+            // the apps list changed, or a phone came, went or was unpaired:
+            // the cache and the launcher entries follow (C2, C4)
+            if kind == "apps" || kind == "devices" {
+                let b = keeper.clone();
+                let dev = ev["device"].as_str().unwrap_or("").to_string();
+                tauri::async_runtime::spawn(async move { housekeep(&b, &dev).await });
+            }
             if kind == "attachment" || kind == "received" {
                 let path = ev["path"].as_str().unwrap_or("");
                 // "received" also fires for a link the phone shared, with the
@@ -486,6 +520,13 @@ GLib.MainLoop().run()
         )
         .unwrap();
         assert_eq!(e["path"], "/home/you/Downloads/a b.jpg");
+        let e = event_for(
+            "org.kde.kdeconnect.device.remotecommands",
+            "commandsChanged",
+            &format!("{DEV}/remotecommands"),
+            &[json!([123, 125])],
+        );
+        assert_eq!(e.unwrap(), json!({ "kind": "apps", "device": "abc123" }));
         assert!(event_for(
             "org.freedesktop.DBus.Properties",
             "PropertiesChanged",

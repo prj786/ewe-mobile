@@ -8,16 +8,24 @@
 //!
 //!   ewe-mobile                 open the window (a second launch focuses it)
 //!   ewe-mobile --page <id>     … on a page: phone messages contacts
-//!                              notifications media files remote devices
+//!                              notifications media files screen apps remote devices
 //!   ewe-mobile --status        one JSON line: the daemon and its devices
 //!   ewe-mobile --version       one JSON line
+//!   ewe-mobile --apps          the phone's apps (C2 rows), one JSON line
+//!   ewe-mobile --open-app <package> [--here|--phone]
+//!   ewe-mobile --screen        the phone's screen in a window (scrcpy)
+//!   ewe-mobile --adb-status    the debugging link
 //!
-//! `--status` and `--version` print JSON and exit 0, like every ewe tool.
+//! Every verb prints JSON and exits 0, like every ewe tool; the four of
+//! `docs/ECOSYSTEM.md` C3 open no window and never start kdeconnectd.
 
+mod adb;
+mod apps;
 mod bus;
 mod contacts;
 mod events;
 mod kdc;
+mod screen;
 mod tools;
 
 use std::sync::Mutex;
@@ -31,13 +39,15 @@ const MAIN: &str = "main";
 
 /// The pages `--page` may name. Public: the shell plugin and other apps open
 /// them, so an id never changes with its label.
-const PAGES: [&str; 8] = [
+const PAGES: [&str; 10] = [
     "phone",
     "messages",
     "contacts",
     "notifications",
     "media",
     "files",
+    "screen",
+    "apps",
     "remote",
     "devices",
 ];
@@ -95,6 +105,10 @@ pub fn run() {
         println!("{}", tauri::async_runtime::block_on(kdc::status_line()));
         return;
     }
+    if let Some(line) = screen::headless(&args) {
+        println!("{line}");
+        return;
+    }
     let page = parse_page(&args);
 
     tauri::Builder::default()
@@ -115,6 +129,8 @@ pub fn run() {
         .manage(kdc::Allowed::default())
         .manage(kdc::Offered::default())
         .manage(Page(Mutex::new(page)))
+        .manage(screen::Windows::default())
+        .manage(adb::Server::default())
         // files dropped on the window are the ones `share_files` may send
         .on_window_event(|window, event| {
             if let WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) = event {
@@ -125,6 +141,18 @@ pub fn run() {
             events::start(app.handle().clone());
             show_main(app.handle());
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // A2: an adb server this app started goes when the window does —
+            // unless a scrcpy window of ours still needs it
+            if let WindowEvent::Destroyed = event {
+                let app = window.app_handle().clone();
+                if app.state::<adb::Server>().started_here()
+                    && !app.state::<screen::Windows>().any_running()
+                {
+                    tools::spawn_reaped("adb", &["kill-server"]);
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             take_page,
@@ -166,6 +194,20 @@ pub fn run() {
             kdc::pointer_do,
             kdc::open_file,
             kdc::open_link,
+            screen::apps,
+            screen::apps_refresh,
+            screen::apps_scrcpy,
+            screen::app_open,
+            screen::launcher_setting,
+            screen::set_launcher_setting,
+            screen::adb_status,
+            screen::adb_services,
+            screen::adb_pair,
+            screen::adb_connect,
+            screen::tools_offer,
+            screen::screen_start,
+            screen::window_stop,
+            screen::windows_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ewe Mobile");
@@ -189,6 +231,11 @@ mod tests {
             parse_page(&args(&["--page=files"])).as_deref(),
             Some("files")
         );
+        assert_eq!(
+            parse_page(&args(&["--page", "screen"])).as_deref(),
+            Some("screen")
+        );
+        assert_eq!(parse_page(&args(&["--page=apps"])).as_deref(), Some("apps"));
         assert_eq!(parse_page(&args(&["--page", "nowhere"])), None);
         assert_eq!(parse_page(&args(&["--page"])), None);
         assert_eq!(parse_page(&args(&[])), None);
