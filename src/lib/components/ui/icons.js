@@ -74,6 +74,9 @@ export const ICONS = {
   shield: 0xE1FF, // shield-check
   keyboard: 0xE284,
   pointer: 0xE1C3, // mouse-pointer-2
+  home: 0xE0F5,
+  recents: 0xE167, // square
+  accessibility: 0xE297,
   // the player
   play: 0xE13C,
   pause: 0xE12E,

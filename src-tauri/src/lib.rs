@@ -160,6 +160,7 @@ pub fn run() {
             kdc::storage_open,
             kdc::storage_close,
             kdc::key_send,
+            kdc::text_send,
             kdc::keyboard_state,
             kdc::pointer_move,
             kdc::pointer_do,

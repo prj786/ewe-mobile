@@ -55,7 +55,8 @@ export const app = $state({
   mediaAt: 0, // when media.position was read
   storage: { mounted: false, sshfs: true, busy: false },
   received: [], // files the phone sent while the window was open
-  keyboard: false,
+  keyboard: false, // the phone says it takes keys (its accessibility service, or its keyboard, is on)
+  keyAcks: 0, // keys the phone said it typed, counted
   call: null // { event, number, name }
 });
 
@@ -224,6 +225,7 @@ export function resetDevice() {
   app.media = null;
   app.storage = { mounted: false, sshfs: true, busy: false };
   app.keyboard = false;
+  app.keyAcks = 0;
   app.call = null;
 }
 
@@ -803,6 +805,9 @@ export function onEvent(ev) {
       break;
     case "keyboard":
       if (mine) app.keyboard = !!ev.active;
+      break;
+    case "keyEcho":
+      if (mine) app.keyAcks++;
       break;
     case "received":
       if (ev.path) {

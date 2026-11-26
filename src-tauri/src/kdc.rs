@@ -10,6 +10,10 @@
 //!   child, and a message is a STRUCT inside a variant — see `message_json`.
 //! - `replyToConversation` silently does nothing for a thread the daemon has
 //!   not cached; `send_message` checks first and falls back to the addresses.
+//! - The pointer and the keys go out whether or not anyone is listening: a
+//!   phone that has not made KDE Connect an accessibility service drops them
+//!   without a word. `remoteState` (and the acknowledgement of a key) is the
+//!   only thing it ever says back — see `press` and `command`.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -990,6 +994,40 @@ fn special_key(name: &str) -> Option<i32> {
     })
 }
 
+/// The modifiers held with a key.
+#[derive(Clone, Copy, Default)]
+pub struct Mods {
+    pub shift: bool,
+    pub ctrl: bool,
+    pub alt: bool,
+    pub meta: bool,
+}
+
+/// `sendKeyPress(key, specialKey, shift, ctrl, alt, super, sendAck)` — seven
+/// arguments since kdeconnect 26.08 (`super` came in before `sendAck`; with
+/// six, the last one is read as `super`). The acknowledgement is asked for:
+/// the phone answers every key it really typed with `keyPressReceived`, the
+/// only word the page ever gets that typing works (events.rs, `keyEcho`).
+pub async fn press(
+    bus: &Bus,
+    device: &str,
+    text: &str,
+    special: i32,
+    mods: Mods,
+) -> Result<(), String> {
+    let path = format!("{}/remotekeyboard", dev_path(device)?);
+    bus.call(
+        &path,
+        KEYBOARD,
+        "sendKeyPress",
+        &(
+            text, special, mods.shift, mods.ctrl, mods.alt, mods.meta, true,
+        ),
+    )
+    .await
+    .map(|_| ())
+}
+
 /// One key: `key` is a KeyboardEvent.key — a character, or a named key.
 #[tauri::command]
 pub async fn key_send(
@@ -999,23 +1037,37 @@ pub async fn key_send(
     shift: bool,
     ctrl: bool,
     alt: bool,
+    meta: bool,
 ) -> Result<(), String> {
     let (text, special) = match special_key(&key) {
         Some(code) => (String::new(), code),
-        None if key.chars().count() == 1 => (key, 0),
+        None if key.chars().count() == 1 && !key.chars().any(char::is_control) => (key, 0),
         None => return Ok(()), // F-keys, modifiers alone: nothing the phone takes
     };
-    let path = format!("{}/remotekeyboard", dev_path(&device)?);
-    link.bus()
-        .await?
-        .call(
-            &path,
-            KEYBOARD,
-            "sendKeyPress",
-            &(text.as_str(), special, shift, ctrl, alt, false),
-        )
-        .await
-        .map(|_| ())
+    let mods = Mods {
+        shift,
+        ctrl,
+        alt,
+        meta,
+    };
+    press(link.bus().await?, &device, &text, special, mods).await
+}
+
+/// The longest run of text one packet carries.
+pub const TEXT_MAX: usize = 500;
+
+/// A run of text, typed as one piece (a paste): the phone commits the whole
+/// string at once, so it cannot arrive out of order or half-typed. One line
+/// at a time — a line break is the Enter key, which is `key_send`'s.
+#[tauri::command]
+pub async fn text_send(link: State<'_, Link>, device: String, text: String) -> Result<(), String> {
+    if text.is_empty() {
+        return Ok(());
+    }
+    if text.chars().count() > TEXT_MAX || text.chars().any(char::is_control) {
+        return Err("That text can’t be typed on the phone.".into());
+    }
+    press(link.bus().await?, &device, &text, 0, Mods::default()).await
 }
 
 /// Is the phone's KDE Connect keyboard up and taking keys?
@@ -1032,6 +1084,18 @@ pub async fn keyboard_state(link: State<'_, Link>, device: String) -> Result<boo
         .unwrap_or(false))
 }
 
+/// Move the pointer by (`dx`, `dy`): `moveCursor` takes one QPoint, `(ii)`.
+pub async fn point(bus: &Bus, device: &str, dx: i32, dy: i32) -> Result<(), String> {
+    let (dx, dy) = (dx.clamp(-2000, 2000), dy.clamp(-2000, 2000));
+    if dx == 0 && dy == 0 {
+        return Ok(());
+    }
+    let path = format!("{}/remotecontrol", dev_path(device)?);
+    bus.call(&path, POINTER, "moveCursor", &((dx, dy),))
+        .await
+        .map(|_| ())
+}
+
 #[tauri::command]
 pub async fn pointer_move(
     link: State<'_, Link>,
@@ -1039,19 +1103,62 @@ pub async fn pointer_move(
     dx: i32,
     dy: i32,
 ) -> Result<(), String> {
-    let (dx, dy) = (dx.clamp(-2000, 2000), dy.clamp(-2000, 2000));
-    if dx == 0 && dy == 0 {
-        return Ok(());
+    point(link.bus().await?, &device, dx, dy).await
+}
+
+/// The words of `kdeconnect.mousepad.request` a pointer may say. What a
+/// phone makes of them (KDE Connect for Android, MouseReceiverPlugin):
+/// `singleclick` taps where the pointer is, `singlehold` puts the finger
+/// down and `singlerelease` lifts it, `middleclick` is Home, `backclick`
+/// Back, `forwardclick` and `doubleclick` Recents, `rightclick` the menu key
+/// on Android 16 and Back before it.
+const POINTER_WORDS: [&str; 8] = [
+    "singleclick",
+    "doubleclick",
+    "middleclick",
+    "rightclick",
+    "backclick",
+    "forwardclick",
+    "singlehold",
+    "singlerelease",
+];
+
+/// The farthest one scroll message may say. A phone adds `dy` up and turns
+/// one page when the sum passes 500 (KdeConnectAccessibilityService.scroll),
+/// so a whole page is one message of 500 or a little more.
+const SCROLL_MAX: f64 = 1200.0;
+
+/// A click or one of the phone's buttons, or a scroll by (`dx`, `dy`).
+pub async fn command(
+    bus: &Bus,
+    device: &str,
+    action: &str,
+    dx: f64,
+    dy: f64,
+) -> Result<(), String> {
+    let mut body: HashMap<&str, Value<'_>> = HashMap::new();
+    if action == "scroll" {
+        let fit = |v: f64| {
+            if v.is_finite() {
+                v.clamp(-SCROLL_MAX, SCROLL_MAX)
+            } else {
+                0.0
+            }
+        };
+        body.insert("scroll", Value::from(true));
+        body.insert("dx", Value::from(fit(dx)));
+        body.insert("dy", Value::from(fit(dy)));
+    } else if POINTER_WORDS.contains(&action) {
+        body.insert(action, Value::from(true));
+    } else {
+        return Err("unknown pointer action".into());
     }
-    let path = format!("{}/remotecontrol", dev_path(&device)?);
-    link.bus()
-        .await?
-        .call(&path, POINTER, "moveCursor", &((dx, dy),))
+    let path = format!("{}/remotecontrol", dev_path(device)?);
+    bus.call(&path, POINTER, "sendCommand", &(body,))
         .await
         .map(|_| ())
 }
 
-/// A click, or a scroll step (`dx`, `dy`).
 #[tauri::command]
 pub async fn pointer_do(
     link: State<'_, Link>,
@@ -1060,25 +1167,14 @@ pub async fn pointer_do(
     dx: Option<f64>,
     dy: Option<f64>,
 ) -> Result<(), String> {
-    let mut body: HashMap<&str, Value<'_>> = HashMap::new();
-    match action.as_str() {
-        "singleclick" | "doubleclick" | "middleclick" | "rightclick" | "singlehold"
-        | "singlerelease" => {
-            body.insert(action.as_str(), Value::from(true));
-        }
-        "scroll" => {
-            body.insert("scroll", Value::from(true));
-            body.insert("dx", Value::from(dx.unwrap_or(0.0).clamp(-500.0, 500.0)));
-            body.insert("dy", Value::from(dy.unwrap_or(0.0).clamp(-500.0, 500.0)));
-        }
-        _ => return Err("unknown pointer action".into()),
-    }
-    let path = format!("{}/remotecontrol", dev_path(&device)?);
-    link.bus()
-        .await?
-        .call(&path, POINTER, "sendCommand", &(body,))
-        .await
-        .map(|_| ())
+    command(
+        link.bus().await?,
+        &device,
+        &action,
+        dx.unwrap_or(0.0),
+        dy.unwrap_or(0.0),
+    )
+    .await
 }
 
 // ── opening things on this computer ─────────────────────────────────────────
@@ -1292,5 +1388,179 @@ mod tests {
         assert_eq!(special_key("Backspace"), Some(1));
         assert_eq!(special_key("a"), None);
         assert_eq!(special_key("F5"), None);
+    }
+
+    /// A stand-in for kdeconnectd with one phone's pointer and keyboard on
+    /// it. Every call is printed with the signature it arrived with — the
+    /// real daemon (Qt) refuses a call whose types are not exactly its own,
+    /// and dbus-python alone would take anything. A key that asks for an
+    /// acknowledgement gets one, as a phone that typed it gives.
+    const PHONE: &str = r#"
+import json, dbus, dbus.service
+from dbus.mainloop.glib import DBusGMainLoop
+from gi.repository import GLib
+DBusGMainLoop(set_as_default=True)
+bus = dbus.SessionBus()
+name = dbus.service.BusName("org.kde.kdeconnect", bus)
+DEV = "/modules/kdeconnect/devices/abc123"
+POINTER = "org.kde.kdeconnect.device.remotecontrol"
+KEYS = "org.kde.kdeconnect.device.remotekeyboard"
+def say(**kw):
+    print(json.dumps(kw), flush=True)
+def plain(v):
+    return bool(v) if isinstance(v, dbus.Boolean) else float(v)
+class Pointer(dbus.service.Object):
+    @dbus.service.method(POINTER, in_signature="(ii)", message_keyword="msg")
+    def moveCursor(self, p, msg=None):
+        say(call="move", sig=msg.get_signature(), dx=int(p[0]), dy=int(p[1]))
+    @dbus.service.method(POINTER, in_signature="a{sv}", message_keyword="msg")
+    def sendCommand(self, body, msg=None):
+        say(call="command", sig=msg.get_signature(), body={str(k): plain(v) for k, v in body.items()})
+class Keys(dbus.service.Object):
+    @dbus.service.method(KEYS, in_signature="sibbbbb", message_keyword="msg")
+    def sendKeyPress(self, key, special, shift, ctrl, alt, sup, ack, msg=None):
+        say(call="key", sig=msg.get_signature(), key=str(key), special=int(special),
+            shift=bool(shift), ctrl=bool(ctrl), alt=bool(alt), super=bool(sup), ack=bool(ack))
+        if ack:
+            self.keyPressReceived(key, special, shift, ctrl, alt, sup)
+    @dbus.service.signal(KEYS, signature="sibbbb")
+    def keyPressReceived(self, key, special, shift, ctrl, alt, sup):
+        pass
+pointer = Pointer(bus, DEV + "/remotecontrol")
+keys = Keys(bus, DEV + "/remotekeyboard")
+GLib.MainLoop().run()
+"#;
+
+    /// What the Remote page sends, as the daemon receives it: the signatures
+    /// kdeconnect 26.08 has, the values in their places, and the phone's
+    /// acknowledgement of a key back as a `keyEcho` event. Run by
+    /// `tests/remote.sh` on a private bus; refuses to run anywhere else.
+    #[test]
+    #[ignore = "run through tests/remote.sh (a private session bus)"]
+    fn private_bus_remote() {
+        use std::process::{Command, Stdio};
+        use std::sync::{Arc, Mutex};
+        assert_eq!(
+            std::env::var("EWE_MOBILE_TEST_BUS").as_deref(),
+            Ok("private"),
+            "run tests/remote.sh — this must never run on the real session bus"
+        );
+        let mut phone = Command::new("python3")
+            .args(["-c", PHONE])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("python3 with dbus and gi");
+        let heard = tauri::async_runtime::block_on(async {
+            let bus = Bus::connect().await.unwrap().passive();
+            for _ in 0..50 {
+                if bus.owner().await.is_some() {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+            assert!(
+                bus.owner().await.is_some(),
+                "the stand-in daemon never took its name"
+            );
+            let echoes: Arc<Mutex<Vec<Json>>> = Arc::default();
+            let sink = echoes.clone();
+            let pump_bus = bus.clone();
+            let task = tauri::async_runtime::spawn(async move {
+                let _ = crate::events::pump(pump_bus, move |ev| {
+                    if ev["kind"] == "keyEcho" {
+                        sink.lock().unwrap().push(ev);
+                    }
+                })
+                .await;
+            });
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
+            let dev = "abc123";
+            point(&bus, dev, 12, -7).await.unwrap();
+            point(&bus, dev, 0, 0).await.unwrap(); // nothing to say: not sent
+            command(&bus, dev, "singleclick", 0.0, 0.0).await.unwrap();
+            command(&bus, dev, "backclick", 0.0, 0.0).await.unwrap();
+            command(&bus, dev, "singlehold", 0.0, 0.0).await.unwrap();
+            command(&bus, dev, "singlerelease", 0.0, 0.0).await.unwrap();
+            command(&bus, dev, "scroll", 0.0, 600.0).await.unwrap();
+            command(&bus, dev, "scroll", 0.0, f64::NAN).await.unwrap();
+            assert!(command(&bus, dev, "reboot", 0.0, 0.0).await.is_err());
+            assert!(command(&bus, "../x", "singleclick", 0.0, 0.0)
+                .await
+                .is_err());
+            let shifted = Mods {
+                shift: true,
+                ..Mods::default()
+            };
+            press(&bus, dev, "A", 0, shifted).await.unwrap();
+            press(&bus, dev, "", 12, Mods::default()).await.unwrap();
+            press(&bus, dev, "see you at 6", 0, Mods::default())
+                .await
+                .unwrap();
+
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            task.abort();
+            let n = echoes.lock().unwrap().clone();
+            n
+        });
+        let _ = phone.kill();
+        let out = phone.wait_with_output().expect("the stand-in's output");
+        let calls: Vec<Json> = String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .filter_map(|l| serde_json::from_str(l).ok())
+            .collect();
+        println!(
+            "calls the daemon got: {}; keys acknowledged: {}",
+            calls.len(),
+            heard.len()
+        );
+
+        assert_eq!(
+            calls[0],
+            json!({ "call": "move", "sig": "(ii)", "dx": 12, "dy": -7 })
+        );
+        let commands: Vec<&Json> = calls.iter().filter(|c| c["call"] == "command").collect();
+        assert!(commands.iter().all(|c| c["sig"] == "a{sv}"));
+        let words: Vec<String> = commands
+            .iter()
+            .map(|c| {
+                let mut keys: Vec<&String> = c["body"].as_object().unwrap().keys().collect();
+                keys.sort();
+                keys.iter()
+                    .map(|k| k.as_str())
+                    .collect::<Vec<_>>()
+                    .join("+")
+            })
+            .collect();
+        assert_eq!(
+            words,
+            [
+                "singleclick",
+                "backclick",
+                "singlehold",
+                "singlerelease",
+                "dx+dy+scroll",
+                "dx+dy+scroll"
+            ]
+        );
+        assert_eq!(commands[0]["body"]["singleclick"], true);
+        assert_eq!(commands[4]["body"]["dy"], 600.0);
+        assert_eq!(commands[5]["body"]["dy"], 0.0); // not a number: no scroll
+
+        let keys: Vec<&Json> = calls.iter().filter(|c| c["call"] == "key").collect();
+        assert_eq!(keys.len(), 3);
+        assert!(keys.iter().all(|k| k["sig"] == "sibbbbb"));
+        assert!(keys.iter().all(|k| k["ack"] == true && k["super"] == false));
+        assert_eq!(keys[0]["key"], "A");
+        assert_eq!(keys[0]["shift"], true);
+        assert_eq!(keys[1]["key"], "");
+        assert_eq!(keys[1]["special"], 12);
+        assert_eq!(keys[2]["key"], "see you at 6");
+        // and nothing else was called
+        assert_eq!(calls.len(), 1 + commands.len() + keys.len());
+
+        assert_eq!(heard.len(), 3, "every key the phone typed is answered");
+        assert!(heard.iter().all(|e| e["device"] == "abc123"));
     }
 }
