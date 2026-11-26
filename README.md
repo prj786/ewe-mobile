@@ -6,9 +6,11 @@ of KDE Connect's five.
 
 ewe Mobile is a **window over KDE Connect's daemon**. `kdeconnectd` keeps the
 link to the phone, the pairing keys and the caches; ewe Mobile is everything
-you see of it, drawn with the ewe design system. The phone runs the stock
-KDE Connect app. (An ewe app for Android is planned beside it; until then
-nothing on the phone changes.)
+you see of it, drawn with the ewe design system. On the phone, **ewe Mobile for
+Android** (a fork of KDE Connect's app with ewe's face,
+`prj786/ewe-connector-android`) sends its apps and their icons as well; the
+stock KDE Connect app still works for everything but the Apps page. The
+plan and the contracts between the pieces: `docs/ECOSYSTEM.md`.
 
 | Page | What it does |
 | --- | --- |

@@ -12,8 +12,8 @@ pkgname=ewe-mobile
 # The archive is addressed by the TAG and extracts to <repo>-<tag without the
 # leading v>, so the source URL and the directory below follow _tag, never
 # pkgver. The release workflow rewrites both.
-_tag=v0.1.1-beta
-pkgver=0.1.1beta
+_tag=v0.2.0-beta
+pkgver=0.2.0beta
 pkgrel=1
 pkgdesc="ewe Mobile — your phone on your desktop: messages, contacts, notifications, media and files"
 arch=('x86_64' 'aarch64')
@@ -41,6 +41,10 @@ optdepends=(
   'android-tools: the debugging link to the phone (adb over Wi-Fi)'
   'scrcpy: the phone’s screen and its apps as windows on this computer'
 )
+# Every run writes one launcher entry per phone app (X-Eep-Skip=true); an
+# older eep turns each into an ~/Applications card (82 of them, seen
+# 2026-11-26). eep 0.4.1-beta skips them.
+conflicts=('eep<0.4.1beta')
 makedepends=('rust' 'cargo' 'nodejs' 'npm')
 
 # Arch's makepkg LTO breaks linking some crates' assembly (see Komble's
