@@ -225,7 +225,22 @@ marking in Quick settings' notification list.
 | S2 | done, 4 commits, 1.2.0: dock item + popup (Apps, Files), bridge C1→C2, C6 hide (`hide_kdeconnect`), wording. `test.sh` 28/28 | `ewe-plugin-phone` · `feat/dock-apps` |
 | eep | `X-Eep-Skip=true` → no card (66f6f72) | `eep` · `feat/skip-mark` (worktree `.wt/eep-skip`; eep's main checkout has someone else's uncommitted work on `feat/add-appimage-meta` — leave it) |
 
-**Blocked on the phone** (Wireless debugging off all day): install the merged APK on the Pixel, then — the C1 list on the PC (`scripts/apps-dump.py`), icon size budget, background start on Android 17, `triggerCommand` opening an app, notification icons on the PC, adb pairing/connect from the Screen page, scrcpy classes (`hyprctl clients`), Open here, then uninstall the stock app (`org.kde.kdeconnect_tp`) and unpair `be62e5e5…` on the PC. Kill the emulator first (`adb -s emulator-5554 emu kill`) so adb sees one device.
+**On the phone (2026-11-26, 19:10–19:20, Pixel 10 Pro XL, Android 17), all passed:** the merged build
+(b2-ewe-face 0c0999a9) installed over the old one, pairing and the accessibility service kept; the C1 list
+reached kdeconnectd — 82 launchable apps (31 system), 604 KB, icons 96 px, rounded (`scripts/apps-dump.py`);
+`triggerCommand(com.google.android.calculator)` opened Calculator on the phone (background start through the
+accessibility service, unlocked phone); `ewe-mobile --adb-status` picked the phone over the emulator;
+`--apps` wrote C2 (82 icons); `--open-app … --here` gave a resizable window, class
+`ewe-mobile-app-com.google.android.calculator`, title "Calculator"; `--screen` → class `ewe-mobile-screen`,
+title "Pixel 10 Pro XL" (tiled on the live session — the float rule is on the shell branch); phone
+notifications now carry the app's launcher icon (Messenger, Messages, Wallet, Instagram, Weather, Calendar —
+no initials). The stock app is **uninstalled** from the phone; the PC lists one paired phone (`ab38d75f…`).
+
+**Deploy order (learned the hard way):** eep with `X-Eep-Skip` (`feat/skip-mark`) **before** the new
+ewe-mobile. Any ewe-mobile run (even `--apps`) writes the 82 launcher entries; the installed eep 0.4.0 made
+82 `~/Applications` cards from them within a minute. Cleaned up the same evening (entries removed → eep
+retired the cards itself; 71 cards, no hide copies). ewe-mobile's PKGBUILD should require the eep that has
+the rule.
 
 **Not yet done:** deploying to the live desktop (plugin 1.2.0, shell branch, ewe-mobile build), the vault (decisions, Roadmap, Version Ledger, Troubleshooting), version bumps, the release — all with the owner.
 
