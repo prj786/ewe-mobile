@@ -103,6 +103,11 @@ pub fn event_for(iface: &str, member: &str, path: &str, args: &[Json]) -> Option
             "device": device,
             "active": args.first().and_then(Json::as_bool).unwrap_or(false),
         }),
+        // the phone typed a key it was sent (kdc::press asks it to say so).
+        // Which key is not passed on: the page counts answers, nothing more.
+        ("device.remotekeyboard", "keyPressReceived") => {
+            json!({ "kind": "keyEcho", "device": device })
+        }
         _ => return None,
     })
 }
@@ -495,5 +500,35 @@ GLib.MainLoop().run()
             &[]
         )
         .is_none());
+    }
+
+    #[test]
+    fn the_phones_keyboard_says_two_things() {
+        let path = format!("{DEV}/remotekeyboard");
+        let e = event_for(
+            "org.kde.kdeconnect.device.remotekeyboard",
+            "remoteStateChanged",
+            &path,
+            &[json!(true)],
+        );
+        assert_eq!(
+            e.unwrap(),
+            json!({ "kind": "keyboard", "device": "abc123", "active": true })
+        );
+        // a key it typed: that it did, never which
+        let e = event_for(
+            "org.kde.kdeconnect.device.remotekeyboard",
+            "keyPressReceived",
+            &path,
+            &[
+                json!("a"),
+                json!(0),
+                json!(false),
+                json!(false),
+                json!(false),
+                json!(false),
+            ],
+        );
+        assert_eq!(e.unwrap(), json!({ "kind": "keyEcho", "device": "abc123" }));
     }
 }

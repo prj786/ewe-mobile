@@ -14,10 +14,12 @@
 //                     without it tokens.css stands
 //   thread=<id>       open that conversation (1 … 6)
 //   call=1            an incoming call
-//   keyboard=1        the phone's remote keyboard is up
+//   keyboard=1        the phone takes the pointer and keys (Remote is set up)
+//   deaf=1            … but no text field is open on it: keys get no answer
 //   nosshfs=1         sshfs is missing on this computer
 //   still             no transitions or animations (screenshots)
 //   slow=<command>    that command never answers (loading states)
+//   trace=1           every command the page sends, on the console
 
 const MIN = 60000;
 const HOUR = 60 * MIN;
@@ -158,6 +160,7 @@ export function install(params) {
   const emit = (payload) => (listeners.get("kdc") || []).forEach((cb) => cb({ payload }));
   const later = (ms, fn) => setTimeout(fn, params.has("still") ? 0 : ms);
   const slow = params.get("slow");
+  const trace = params.has("trace");
 
   async function scheme() {
     const name = params.get("scheme");
@@ -287,7 +290,16 @@ export function install(params) {
       storage.mounted = false;
       return null;
     },
-    key_send: () => null,
+    // a phone that types what it is sent says so; `deaf=1` is one with no
+    // text field open — it takes the key and answers nothing
+    key_send: () => {
+      if (!params.has("deaf")) later(60, () => emit({ kind: "keyEcho", device: phone.id }));
+      return null;
+    },
+    text_send: () => {
+      if (!params.has("deaf")) later(60, () => emit({ kind: "keyEcho", device: phone.id }));
+      return null;
+    },
     keyboard_state: () => params.has("keyboard"),
     pointer_move: () => null,
     pointer_do: () => null,
@@ -300,6 +312,7 @@ export function install(params) {
 
   window.__EWE_MOBILE_MOCK__ = {
     invoke: async (cmd, args = {}) => {
+      if (trace) console.info("mock", cmd, JSON.stringify(args));
       if (slow && slow === cmd) return new Promise(() => {});
       const h = handlers[cmd];
       if (!h) throw new Error(`mock: no such command ${cmd}`);

@@ -79,9 +79,15 @@ jobs:
       - name: Only the daemon's signals pass
         run: tests/origin.sh
 
+      # the same throwaway bus, a stand-in phone: what the Remote page sends
+      # must arrive with the signatures kdeconnectd declares
+      - name: The daemon understands the Remote page
+        run: tests/remote.sh
+
       - name: Shell syntax
         run: |
           bash -n PKGBUILD
           bash -n tests/smoke.sh
           bash -n tests/origin.sh
+          bash -n tests/remote.sh
           bash -n scripts/gen-icons.sh

@@ -17,7 +17,7 @@ nothing on the phone changes.)
 | **Notifications** | What the phone is showing, by app: dismiss (on the phone too), reply to the ones that take a reply |
 | **Media** | The phone's player: play, pause, skip, seek, volume, which player |
 | **Files** | Send files (drop them anywhere on the window), text and links; browse the phone's storage in ewe Files; open what the phone sent |
-| **Remote** | This computer's mouse and keyboard on the phone |
+| **Remote** | This computer's mouse and keyboard on the phone: a pad for the pointer (tap, swipe, long-press, turn the page, Back / Home / Recents) and a box that types into the field open on the phone. The phone has to allow it once — see below |
 | **Devices** | Pair and unpair, pick the phone in use, name this computer, switch single features on and off |
 
 Not here, on purpose: the bar's phone glyph and the Quick settings page.
@@ -40,6 +40,8 @@ phone ── KDE Connect protocol ── kdeconnectd ── session D-Bus ──
   `~/.local/share/kpeoplevcard/kdeconnect-<id>/` (vCard 2.1 and 3.0).
 - `src/lib/state.svelte.js` — the window's reading of the daemon, and its
   actions. Screens are in `src/lib/screens/`.
+- `src/lib/remote.js` — what a press, a drag, a wheel and a key mean on the
+  Remote page, before anything is sent (plain functions; `npm test`).
 
 ewe Mobile keeps nothing: no database, no copy of your messages. Close the
 window and the process ends. The one thing remembered is which phone was in
@@ -80,6 +82,33 @@ Two facts about KDE Connect's D-Bus interface that cost time to find
   read, thread id, uid, SIM id, attachments.
 - `replyToConversation` does nothing, silently, for a thread the daemon has
   not cached. `send_message` checks and falls back to the addresses.
+- `remotekeyboard.sendKeyPress` takes **seven** arguments since 26.08 —
+  `key, specialKey, shift, ctrl, alt, super, sendAck`. With six, the last is
+  read as `super`. `tests/remote.sh` holds the call to the signature.
+
+### The Remote page and the phone
+
+The pointer and the keys go out whether or not anyone is listening. A phone
+takes them only once **KDE Connect is an accessibility service** there (KDE
+Connect → the plugins that "need permissions" → Mouse receiver → Accessibility
+settings; a copy from outside the Play Store first needs "Allow restricted
+settings" in its App info). Until then it drops everything without a word,
+and the page looks dead. Two things do come back, and the page is built on
+them (KDE Connect for Android 1.36 or newer):
+
+- `remoteState` is true while the phone takes input — the accessibility
+  service is on, or its own keyboard is up. False: the page shows what to
+  switch on, on the phone.
+- every key the phone really typed is acknowledged (`keyPressReceived`). Keys
+  that get no answer went nowhere — no text field is open there — and the
+  page says that instead of echoing them as if they had landed.
+
+What the phone makes of the pointer's words is KDE Connect's, not ours:
+`singleclick` taps, `singlehold` / `singlerelease` put the finger down and
+lift it, `middleclick` is Home, `backclick` Back, `forwardclick` Recents,
+`rightclick` the menu key on Android 16+ (Back before it). A `scroll` is not
+a distance: the phone adds `dy` up and turns one whole page when the sum
+passes 500, forward when it is positive — so the wheel sends whole pages.
 
 ## Command line
 
@@ -106,6 +135,7 @@ npm run dev                       # the UI alone: http://localhost:5177/?mock=1#
 npm test                          # node: numbers, times, SMS parts, links
 cd src-tauri && cargo test        # Rust: vCards, the message decoder, events, ids
 tests/origin.sh                   # a private bus: only the daemon's signals pass
+tests/remote.sh                   # a private bus: the Remote page's calls, as the daemon gets them
 tests/smoke.sh                    # the built binary's --version / --status contract
 cargo clippy --all-targets -- -D warnings && cargo fmt --check
 ```
@@ -116,8 +146,9 @@ bakes the Vite dev URL into the binary.
 
 The mock (`src/lib/devmock.js`) takes parameters: `scene=welcome|pairing|
 asks|away|empty|nodaemon|two`, `scheme=ewe-dark|ewe-light|a11y`,
-`thread=<1…6>`, `call=1`, `keyboard=1`, `nosshfs=1`, `still`. Everyone in it
-is made up.
+`thread=<1…6>`, `call=1`, `keyboard=1` (the phone takes the pointer and
+keys), `deaf=1` (… but answers no key), `nosshfs=1`, `still`, `trace=1`
+(every command the page sends, on the console). Everyone in it is made up.
 
 Two tests read the **real** daemon and phone, and are off by default. They
 ask only for what opening the app asks, send nothing, and print counts:

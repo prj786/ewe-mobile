@@ -1538,6 +1538,20 @@ code {
   .pad.is-held > .ewe-icon {
     color: var(--accent-text);
   }
+  /* the finger is down on the phone: the drag is a swipe */
+  .pad.is-dragging {
+    border-color: var(--accent);
+    border-width: var(--border-width-2);
+  }
+  /* the phone's own buttons, under the pad */
+  .padkeys {
+    display: flex;
+    gap: var(--space-s);
+  }
+  .padkeys > .ewe-btn {
+    flex: 1;
+    min-width: 0;
+  }
   .pad.is-disabled,
   .keys.is-disabled {
     cursor: not-allowed;
@@ -1571,12 +1585,26 @@ code {
     background: var(--surface-sunken);
     color: var(--text-secondary);
     cursor: text;
+    position: relative;
     transition: border-color var(--dur-fast) var(--ease-out);
   }
-  .keys:focus-visible,
   .keys.is-typing {
-    outline: none;
     border-color: var(--focus-ring);
+  }
+  /* The box is a real text field, so a paste, a dead key and an input method
+     all reach it — but an empty, unseen one: what is typed shows as the echo
+     beside it and lands on the phone. */
+  .keys__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    resize: none;
+    cursor: inherit;
   }
   .keys__echo {
     font-family: var(--font-mono);
@@ -1589,6 +1617,13 @@ code {
   .keys__hint {
     font-size: var(--font-size-md);
     line-height: var(--line-height-md);
+  }
+  .note--warning {
+    color: var(--warning);
+  }
+  .setup__more {
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
   }
 
   /* ── Devices ─────────────────────────────────────────────────────────── */

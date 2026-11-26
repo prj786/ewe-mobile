@@ -69,9 +69,12 @@ export const storageClose = (device) => invoke("storage_close", { device });
 
 // typing and pointing on the phone
 export const keySend = (device, key, mods = {}) =>
-  invoke("key_send", { device, key, shift: !!mods.shift, ctrl: !!mods.ctrl, alt: !!mods.alt });
+  invoke("key_send", { device, key, shift: !!mods.shift, ctrl: !!mods.ctrl, alt: !!mods.alt, meta: !!mods.meta });
+/** a run of text typed as one piece (a paste): one line, at most 500 characters */
+export const textSend = (device, text) => invoke("text_send", { device, text });
 export const keyboardState = (device) => invoke("keyboard_state", { device });
 export const pointerMove = (device, dx, dy) => invoke("pointer_move", { device, dx, dy });
+/** action: singleclick | middleclick | rightclick | backclick | forwardclick | singlehold | singlerelease | scroll (dx, dy) */
 export const pointerDo = (device, action, dx = null, dy = null) => invoke("pointer_do", { device, action, dx, dy });
 
 // this computer
