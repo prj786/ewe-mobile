@@ -28,6 +28,20 @@ export const ICONS = {
   settings: 0xE154,
   // the side navigation
   phone: 0xE163, // smartphone
+  grid: 0xE0FF, // layout-grid
+  appWindow: 0xE426, // app-window
+  screenShare: 0xE14F, // screen-share
+  cast: 0xE066,
+  stop: 0xE083, // circle-stop
+  power: 0xE140,
+  moon: 0xE11E,
+  eyeOff: 0xE0BB, // eye-off
+  key: 0xE4A3, // key-round
+  shieldAlert: 0xE1FE, // shield-alert
+  pkg: 0xE129, // package
+  rocket: 0xE286,
+  monitorPlay: 0xE485, // monitor-play
+  gauge: 0xE1BF,
   messages: 0xE117, // message-square
   contacts: 0xE09C, // contact
   bell: 0xE059,

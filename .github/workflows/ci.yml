@@ -84,10 +84,20 @@ jobs:
       - name: The daemon understands the Remote page
         run: tests/remote.sh
 
+      # the same bus, a stand-in phone serving the C1 apps fixture, a fake
+      # adb and scrcpy on PATH: the list, the cache, the launcher entries,
+      # the triggers and the commandsChanged event (the binary half is
+      # skipped here — no release build in CI)
+      - name: The phone's apps, end to end
+        run: tests/apps.sh
+
       - name: Shell syntax
         run: |
           bash -n PKGBUILD
           bash -n tests/smoke.sh
           bash -n tests/origin.sh
           bash -n tests/remote.sh
+          bash -n tests/apps.sh
+          bash -n tests/fakebin/adb
+          bash -n tests/fakebin/scrcpy
           bash -n scripts/gen-icons.sh

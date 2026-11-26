@@ -17,16 +17,19 @@
   const loud = $derived(app.notifications.filter((n) => !n.silent));
   const silent = $derived(app.notifications.filter((n) => n.silent));
 
+  // the app's own launcher icon (C2, by the package in the notification),
+  // else the picture the phone sent with it — never a letter
+  const iconFor = (n) => view.appIcon(n.package) || n.icon || "";
   const byApp = (list) => {
     const groups = [];
     for (const n of list) {
       const name = n.app || "Phone";
       let g = groups.find((x) => x.app === name);
       if (!g) {
-        g = { app: name, icon: n.icon, items: [] };
+        g = { app: name, icon: iconFor(n), items: [] };
         groups.push(g);
       }
-      if (!g.icon && n.icon) g.icon = n.icon;
+      if (!g.icon) g.icon = iconFor(n);
       g.items.push(n);
     }
     return groups;
@@ -59,7 +62,7 @@
     <section class="group">
       <div class="ewe-section">
         <h2 class="ewe-section__title ewe-section__title--overline apphead">
-          {#if g.icon}<img class="apphead__icon" src={g.icon} alt="" />{/if}
+          {#if g.icon}<img class="apphead__icon" src={g.icon} alt="" />{:else}<span class="apphead__icon apphead__icon--none"><Icon name="bell" /></span>{/if}
           {g.app}
         </h2>
       </div>
@@ -147,6 +150,8 @@
 
     {#if !app.notificationsReady && view.usable}
       <div class="listnote"><span class="ewe-spinner ewe-spinner--sm"></span> Reading notifications…</div>
+    {:else if !view.can("notifications") && view.usable}
+      <Empty icon="bell" title="Notifications are turned off" desc="Turn them on under Devices, in what {view.device?.name ?? 'the phone'} may do." />
     {:else if !loud.length && !view.usable}
       <Empty icon="bell" title="Nothing read yet" desc="Notifications are read from the phone when it is in reach." />
     {:else if !loud.length}

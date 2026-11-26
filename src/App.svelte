@@ -2,7 +2,7 @@
   import { onMount, untrack } from "svelte";
   import * as api from "./lib/api.js";
   import {
-    app, view, PAGES, boot, onEvent, resetDevice, loadDevice, loadContacts, lookAgain, sendFiles
+    app, view, PAGES, boot, onEvent, resetDevice, loadDevice, loadContacts, loadApps, loadLauncherSetting, lookAgain, sendFiles
   } from "./lib/state.svelte.js";
   import { watchTheme } from "./lib/theme.js";
   import Sidebar from "./lib/components/Sidebar.svelte";
@@ -15,6 +15,8 @@
   import Notifications from "./lib/screens/Notifications.svelte";
   import Media from "./lib/screens/Media.svelte";
   import Files from "./lib/screens/Files.svelte";
+  import Screen from "./lib/screens/Screen.svelte";
+  import Apps from "./lib/screens/Apps.svelte";
   import Remote from "./lib/screens/Remote.svelte";
   import Devices from "./lib/screens/Devices.svelte";
 
@@ -67,7 +69,10 @@
       if (id !== lastDevice) {
         lastDevice = id;
         resetDevice();
-        if (id) loadContacts(); // the address book is on disk: readable out of reach
+        if (id) {
+          loadContacts(); // the address book is on disk: readable out of reach
+          loadApps(); // … and so is the apps cache (C2)
+        }
       }
       if (id && ok) loadDevice();
     });
@@ -102,6 +107,7 @@
     if (ROUTES.includes(h)) app.route = h;
 
     off.push(watchTheme(themeKey, 4000));
+    loadLauncherSetting();
     const tick = setInterval(() => (app.now = Date.now()), 30000);
     off.push(() => clearInterval(tick));
 
@@ -216,6 +222,10 @@
       <Media />
     {:else if app.route === "files"}
       <Files />
+    {:else if app.route === "screen"}
+      <Screen />
+    {:else if app.route === "apps"}
+      <Apps />
     {:else if app.route === "remote"}
       <Remote />
     {:else}

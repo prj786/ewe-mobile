@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# A stand-in scrcpy for tests: records its arguments and SDL_APP_ID in
+# FAKE_SCRCPY_LOG, lists apps for --list-apps, else stays up a few seconds
+# like a window would.
+{ echo "SDL_APP_ID=${SDL_APP_ID:-}"; printf 'ARG %s\n' "$@"; } >> "${FAKE_SCRCPY_LOG:-/dev/null}"
+for a in "$@"; do
+  if [ "$a" = "--list-apps" ]; then
+    printf 'INFO: Connected to adb\nList of apps:\n'
+    printf ' - Calculator                        com.google.android.calculator\n'
+    printf ' * Settings                          com.android.settings\n'
+    printf ' - WhatsApp                          com.whatsapp\n'
+    exit 0
+  fi
+done
+sleep "${FAKE_SCRCPY_SLEEP:-3}"
+exit 0

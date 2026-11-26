@@ -17,6 +17,13 @@
 //   keyboard=1        the phone takes the pointer and keys (Remote is set up)
 //   deaf=1            … but no text field is open on it: keys get no answer
 //   nosshfs=1         sshfs is missing on this computer
+//   adb=none|tools|seen|pairing|paired|connected
+//                     the debugging link: no tools / tools but the phone's
+//                     Wireless debugging off / on and found / its pairing
+//                     dialog open / paired, not connected / connected
+//                     (default: connected)
+//   stock=1           the phone runs the stock KDE Connect app: no apps list
+//   mirror=1          the mirrored screen is up
 //   still             no transitions or animations (screenshots)
 //   slow=<command>    that command never answers (loading states)
 //   trace=1           every command the page sends, on the console
@@ -136,6 +143,42 @@ export function install(params) {
   ];
   let media = { player: "Spotify", players: ["Spotify", "YouTube"], title: "Suliko", artist: "Trio Mandili", album: "With Love", playing: true, canSeek: true, length: 201000, position: 64000, volume: 56, art: cover };
   let storage = { mounted: false, sshfs: !params.has("nosshfs") };
+
+  // the phone's apps (C1 → C2) and the debugging link
+  const APPS = [
+    ["com.whatsapp", "WhatsApp", "#25d366", "W"], ["org.telegram.messenger", "Telegram", "#2aabee", "T"],
+    ["com.instagram.android", "Instagram", "#e1306c", "I"], ["com.google.android.youtube", "YouTube", "#ff0000", "▶"],
+    ["com.spotify.music", "Spotify", "#1db954", "S"], ["com.google.android.apps.maps", "Maps", "#34a853", "M"],
+    ["com.google.android.gm", "Gmail", "#ea4335", "G"], ["com.google.android.calendar", "Calendar", "#1a73e8", "31"],
+    ["ge.bog.mobilebank", "Bank of Georgia", "#ff5b00", "B"], ["ge.tbc.mobilebank", "TBC", "#00a3e0", "T"],
+    ["com.google.android.apps.photos", "Photos", "#fbbc04", "P"], ["com.android.chrome", "Chrome", "#4285f4", "C"],
+    ["org.mozilla.firefox", "Firefox", "#ff7139", "F"], ["com.google.android.keep", "Keep", "#f9ab00", "K"],
+    ["com.google.android.calculator", "Calculator", "#5f6368", "="], ["com.android.camera2", "Camera", "#202124", "◉"],
+    ["com.google.android.apps.messaging", "Messages", "#1a73e8", "M"], ["com.google.android.dialer", "Phone", "#1e8e3e", "☏"],
+    ["com.google.android.deskclock", "Clock", "#4285f4", "◴"], ["com.android.vending", "Play Store", "#01875f", "▷"],
+    ["org.signal", "Signal", "#3a76f0", "S"], ["com.netflix.mediaclient", "Netflix", "#e50914", "N"],
+    ["com.duolingo", "Duolingo", "#58cc02", "D"], ["com.google.android.apps.docs", "Drive", "#fbbc04", "△"]
+  ].map(([pkg, label, color, letter]) => ({ package: pkg, name: label, sys: false, icon: appIcon(color, letter) }));
+  for (const [pkg, label] of [["com.android.settings", "Settings"], ["com.android.documentsui", "Files"], ["com.google.android.apps.wellbeing", "Digital Wellbeing"]]) {
+    APPS.push({ package: pkg, name: label, sys: true, icon: appIcon("#5f6368", label[0]) });
+  }
+  APPS.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  // the notifications name their packages (0|<package>|…), as the phone does
+  const PKG_OF = { Signal: "org.signal", Calendar: "com.google.android.calendar", Mail: "com.google.android.gm", Weather: "", System: "" };
+  for (const n of notifications) n.package = PKG_OF[n.app] ?? "";
+  const stock = params.has("stock");
+  const adbMode = params.get("adb") || "connected";
+  const windows = params.has("mirror") ? [{ class: "ewe-mobile-screen", title: phone.name, package: null }] : [];
+  let paired = ["paired", "connected"].includes(adbMode);
+  let connected = adbMode === "connected";
+  let launcherApps = true;
+  const adbStatus = () => {
+    const tools = adbMode === "none" ? { adb: false, scrcpy: false } : { adb: true, scrcpy: true };
+    const services = [];
+    if (["seen", "pairing", "paired", "connected"].includes(adbMode)) services.push({ name: "adb-58231FDCQ001AX-UVeQ4f", kind: "connect", host: "192.168.1.5", port: 39855 });
+    if (adbMode === "pairing" && !paired) services.push({ name: "adb-58231FDCQ001AX-UVeQ4f", kind: "pairing", host: "192.168.1.5", port: 41021 });
+    return { ok: true, tools, paired, connected, serial: connected ? "adb-58231FDCQ001AX-UVeQ4f._adb-tls-connect._tcp" : "", model: connected ? "Pixel 9" : "", services, devices: [] };
+  };
   let selfName = "ewe-laptop";
   const enabled = new Map();
 
@@ -303,6 +346,57 @@ export function install(params) {
     keyboard_state: () => params.has("keyboard"),
     pointer_move: () => null,
     pointer_do: () => null,
+    // the phone's apps and the debugging link
+    apps: () => {
+      if (stock) return { source: "none", updated: 0, apps: [] };
+      if (!phone.reachable) return { source: "cache", updated: now - 3 * HOUR, apps: APPS };
+      return { source: "phone", updated: now, apps: APPS };
+    },
+    apps_refresh: () => {
+      later(700, () => emit({ kind: "apps", device: phone.id }));
+      return null;
+    },
+    apps_scrcpy: () =>
+      new Promise((resolve) =>
+        later(1500, () => resolve({ updated: now, apps: APPS.map(({ icon, ...a }) => ({ ...a, icon: "" })) }))
+      ),
+    app_open: ({ package: pkg, name, where }) => {
+      if (!connected && where === "here") throw new Error("The phone isn’t connected for debugging.");
+      if (where === "phone" || (where === "auto" && !connected)) {
+        if (stock) throw new Error(`${phone.name} runs the stock KDE Connect app, which can’t open apps. Install ewe Mobile on it.`);
+        return "phone";
+      }
+      later(800, () => windows.push({ class: `ewe-mobile-app-${pkg}`, title: name, package: pkg }));
+      return "here";
+    },
+    launcher_setting: () => launcherApps,
+    set_launcher_setting: ({ on }) => {
+      launcherApps = on;
+      return null;
+    },
+    adb_status: adbStatus,
+    adb_services: () => adbStatus().services,
+    adb_pair: ({ code }) => {
+      if (code !== "123456") throw new Error("The phone refused the code. Read the six digits again — each attempt gets a new code.");
+      paired = true;
+      later(1500, () => (connected = true));
+      return "adb-58231FDCQ001AX-UVeQ4f";
+    },
+    adb_connect: () => {
+      connected = true;
+      return null;
+    },
+    tools_offer: () => true,
+    screen_start: () => {
+      later(500, () => windows.push({ class: "ewe-mobile-screen", title: phone.name, package: null }));
+      return null;
+    },
+    window_stop: ({ class: cls }) => {
+      const i = windows.findIndex((w) => w.class === cls);
+      if (i >= 0) windows.splice(i, 1);
+      return i >= 0;
+    },
+    windows_state: () => ({ windows: [...windows], died: [] }),
     open_file: () => null,
     open_link: ({ url }) => {
       console.info("open", url);

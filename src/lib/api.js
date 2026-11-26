@@ -77,6 +77,29 @@ export const pointerMove = (device, dx, dy) => invoke("pointer_move", { device, 
 /** action: singleclick | middleclick | rightclick | backclick | forwardclick | singlehold | singlerelease | scroll (dx, dy) */
 export const pointerDo = (device, action, dx = null, dy = null) => invoke("pointer_do", { device, action, dx, dy });
 
+// the phone's apps (docs/ECOSYSTEM.md C1/C2) and the debugging link (adb, scrcpy)
+/** { source: phone | cache | none, updated, apps: [{ package, name, sys, icon }] } */
+export const apps = (device) => invoke("apps", { device });
+export const appsRefresh = (device) => invoke("apps_refresh", { device });
+/** the fallback list from `scrcpy --list-apps` (cached a day unless refresh) */
+export const appsScrcpy = (device, refresh = false) => invoke("apps_scrcpy", { device, refresh });
+/** where: here | phone | auto; resolves to where it went */
+export const appOpen = (device, pkg, name, where = "auto") => invoke("app_open", { device, package: pkg, name, where });
+export const launcherSetting = () => invoke("launcher_setting");
+export const setLauncherSetting = (on) => invoke("set_launcher_setting", { on });
+export const adbStatus = (device) => invoke("adb_status", { device });
+export const adbServices = () => invoke("adb_services");
+export const adbPair = (host, port, code) => invoke("adb_pair", { host, port, code });
+export const adbConnect = (host, port) => invoke("adb_connect", { host, port });
+/** Komble on the missing package; false = no Komble */
+export const toolsOffer = () => invoke("tools_offer");
+/** opts: { screenOff, audio, stayAwake, quality } */
+export const screenStart = (device, opts) =>
+  invoke("screen_start", { device, opts: { screen_off: !!opts.screenOff, audio: opts.audio !== false, stay_awake: !!opts.stayAwake, quality: opts.quality || "balanced" } });
+export const windowStop = (cls) => invoke("window_stop", { class: cls });
+/** { windows: [{ class, title, package }], died: [{ class, title, package, ok, words }] } */
+export const windowsState = () => invoke("windows_state");
+
 // this computer
 export const openFile = (path, reveal = false) => invoke("open_file", { path, reveal });
 export const openLink = (url) => invoke("open_link", { url });
