@@ -214,6 +214,21 @@ marking in Quick settings' notification list.
    nested shell), the vault, version bumps, the owner's review. Release
    (push, tags, APK) only when the owner says.
 
+### Status (2026-11-26, 19:00)
+
+| # | State | Where |
+|---|---|---|
+| A1 + A3 + A2 | **merged** on `b2-ewe-face` (874cdb14): ewe flavor, generated tokens, kit, Home/Devices/Setup/Settings, Remote/Media/Commands/Send/Ring/Presenter, EweAppsPlugin, app icon in notifications. 148 unit tests, lint, token checks green; emulator `ember36` only — **never on the phone yet** | `ewe-connector-android` |
+| A4 | polish pass running (Home duplicate name, Setup density, Devices unpair, Geist Mono, rounded icon mask, one demo mode) | same branch |
+| D1 | done, 3 commits: adb link, Screen + Apps pages, C3 verbs, C4 entries (`X-Eep-Skip=true`), icons on Notifications. Tests green against fakes | `ewe-mobile` · `feat/ecosystem` |
+| S1 | done, 2 commits: phone cards, inline reply, ewe Mobile icon fallback, click → `ewe-mobile --page notifications`, `ewe-mobile-screen` window rule | `ewe` · `feat/phone-notifications` |
+| S2 | done, 4 commits, 1.2.0: dock item + popup (Apps, Files), bridge C1→C2, C6 hide (`hide_kdeconnect`), wording. `test.sh` 28/28 | `ewe-plugin-phone` · `feat/dock-apps` |
+| eep | `X-Eep-Skip=true` → no card (66f6f72) | `eep` · `feat/skip-mark` (worktree `.wt/eep-skip`; eep's main checkout has someone else's uncommitted work on `feat/add-appimage-meta` — leave it) |
+
+**Blocked on the phone** (Wireless debugging off all day): install the merged APK on the Pixel, then — the C1 list on the PC (`scripts/apps-dump.py`), icon size budget, background start on Android 17, `triggerCommand` opening an app, notification icons on the PC, adb pairing/connect from the Screen page, scrcpy classes (`hyprctl clients`), Open here, then uninstall the stock app (`org.kde.kdeconnect_tp`) and unpair `be62e5e5…` on the PC. Kill the emulator first (`adb -s emulator-5554 emu kill`) so adb sees one device.
+
+**Not yet done:** deploying to the live desktop (plugin 1.2.0, shell branch, ewe-mobile build), the vault (decisions, Roadmap, Version Ledger, Troubleshooting), version bumps, the release — all with the owner.
+
 ### Rules every agent follows
 
 - Exclusive files: only your repo/branch above. Shared docs (this file,
