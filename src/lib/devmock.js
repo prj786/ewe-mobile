@@ -141,7 +141,6 @@ export function install(params) {
     { id: "3", app: "Weather", title: "18° · Partly cloudy", text: "Tbilisi", ticker: "", icon: appIcon("#5a94c8", "W"), dismissable: false, replyId: "", silent: true, conversation: false },
     { id: "2", app: "System", title: "Charging slowly", text: "Use the charger that came with the phone.", ticker: "", icon: "", dismissable: false, replyId: "", silent: true, conversation: false }
   ];
-  for (const n of notifications) n.package = PKG_OF[n.app] ?? "";
   let media = { player: "Spotify", players: ["Spotify", "YouTube"], title: "Suliko", artist: "Trio Mandili", album: "With Love", playing: true, canSeek: true, length: 201000, position: 64000, volume: 56, art: cover };
   let storage = { mounted: false, sshfs: !params.has("nosshfs") };
 
@@ -166,6 +165,7 @@ export function install(params) {
   APPS.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
   // the notifications name their packages (0|<package>|…), as the phone does
   const PKG_OF = { Signal: "org.signal", Calendar: "com.google.android.calendar", Mail: "com.google.android.gm", Weather: "", System: "" };
+  for (const n of notifications) n.package = PKG_OF[n.app] ?? "";
   const stock = params.has("stock");
   const adbMode = params.get("adb") || "connected";
   const windows = params.has("mirror") ? [{ class: "ewe-mobile-screen", title: phone.name, package: null }] : [];

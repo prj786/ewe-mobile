@@ -99,7 +99,9 @@
           <input type="search" placeholder="Search {list.length} apps" aria-label="Search apps" bind:value={query} spellcheck="false" />
         </label>
         {#if sysCount}
-          <label class="appsbar__count"><input type="checkbox" bind:checked={hideSys} /> Hide {sysCount} system apps</label>
+          <button type="button" class="ewe-btn ewe-btn--ghost ewe-btn--sm" aria-pressed={hideSys} onclick={() => (hideSys = !hideSys)}>
+            {hideSys ? `Show ${sysCount} system apps` : `Hide ${sysCount} system apps`}
+          </button>
         {/if}
         <span class="appsbar__count">
           {#if app.apps.fallback}From scrcpy{:else if app.apps.source === "cache"}Kept from last time{:else}From {name}{/if}{app.apps.updated ? ` · ${readWhen(app.apps.updated, app.now)}` : ""}

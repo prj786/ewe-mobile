@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# A stand-in adb for tests: answers like adb 37 for one phone in reach,
+# paired and connected; records every call. FAKE_ADB_LOG names the log.
+echo "adb $*" >> "${FAKE_ADB_LOG:-/dev/null}"
+case "$1" in
+  mdns)
+    printf 'List of discovered mdns services\n'
+    printf 'adb-FAKE0001-abcdef\t_adb-tls-connect._tcp\t192.168.1.5:39855\n'
+    [ -n "${FAKE_ADB_PAIRING:-}" ] && printf 'adb-FAKE0001-abcdef\t_adb-tls-pairing._tcp\t192.168.1.5:41021\n'
+    ;;
+  devices)
+    printf 'List of devices attached\n'
+    [ -n "${FAKE_ADB_OFFLINE:-}" ] || printf 'adb-FAKE0001-abcdef._adb-tls-connect._tcp device product:fake model:Pixel_9 device:fake transport_id:1\n'
+    ;;
+  pair)
+    if [ "$3" = "123456" ]; then echo "Successfully paired to $2 [guid=adb-FAKE0001-abcdef]"; else echo "failed to pair to $2"; exit 1; fi ;;
+  connect) echo "connected to $2" ;;
+  start-server) echo "* daemon started successfully" >&2 ;;
+  kill-server) ;;
+  *) echo "fake adb: $*" >&2 ;;
+esac
+exit 0

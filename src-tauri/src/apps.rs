@@ -892,6 +892,162 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    /// The whole path over a private bus — run by `tests/apps.sh`, which
+    /// starts `dbus-run-session`, points HOME/XDG at a throwaway folder and
+    /// names the fixture. The stand-in daemon (tests/standin-daemon.py) owns
+    /// org.kde.kdeconnect with one phone whose remotecommands serve the C1
+    /// fixture; SIGUSR1 makes it change the list.
+    #[test]
+    #[ignore = "run through tests/apps.sh (a private session bus)"]
+    fn private_bus_apps() {
+        use std::process::{Command, Stdio};
+        use std::sync::{Arc, Mutex};
+        assert_eq!(
+            std::env::var("EWE_MOBILE_TEST_BUS").as_deref(),
+            Ok("private"),
+            "run tests/apps.sh — this must never run on the real session bus"
+        );
+        let fixture = std::env::var("EWE_MOBILE_FIXTURE").expect("EWE_MOBILE_FIXTURE");
+        let trigger_log = std::env::var("EWE_MOBILE_TRIGGER_LOG").expect("EWE_MOBILE_TRIGGER_LOG");
+        let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/standin-daemon.py");
+        let mut daemon = Command::new("python3")
+            .arg(&script)
+            .arg(&fixture)
+            .arg(&trigger_log)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("python3 with dbus and gi");
+        let pid = daemon.id();
+        tauri::async_runtime::block_on(async {
+            let bus = Bus::connect().await.unwrap().passive();
+            for _ in 0..50 {
+                if bus.owner().await.is_some() {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+            assert!(
+                bus.owner().await.is_some(),
+                "the stand-in never took its name"
+            );
+
+            // the pump, so commandsChanged below is seen
+            let seen: Arc<Mutex<Vec<Json>>> = Arc::default();
+            let sink_seen = seen.clone();
+            let pump_bus = bus.clone();
+            let task = tauri::async_runtime::spawn(async move {
+                let _ = crate::events::pump(pump_bus, move |ev| sink_seen.lock().unwrap().push(ev))
+                    .await;
+            });
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
+            // C1 over the bus
+            let list = apps_live(&bus, "abc123")
+                .await
+                .unwrap()
+                .expect("the fixture is ours");
+            let pk: Vec<&str> = list.iter().map(|a| a.package.as_str()).collect();
+            // the webp "icon" costs the app its icon, not its place
+            assert_eq!(
+                pk,
+                [
+                    "ge.bog.mobilebank",
+                    "com.android.settings",
+                    "org.signal",
+                    "com.webp",
+                    "com.whatsapp"
+                ]
+            );
+            assert!(list
+                .iter()
+                .find(|a| a.package == "com.webp")
+                .unwrap()
+                .icon
+                .is_none());
+            assert!(list
+                .iter()
+                .find(|a| a.package == "com.whatsapp")
+                .unwrap()
+                .icon
+                .is_some());
+            assert!(list
+                .iter()
+                .find(|a| a.package == "ge.bog.mobilebank")
+                .unwrap()
+                .icon
+                .is_none());
+            assert!(
+                commands_of(&bus, "nobody1").await.is_err()
+                    || commands_of(&bus, "nobody1").await.unwrap().is_none()
+            );
+
+            // C2 + C4 through sync, into the throwaway HOME the script set
+            let (source, rows, _) = sync(&bus, "abc123", "Pixel 9", true).await;
+            assert_eq!(source, "phone");
+            assert_eq!(rows.len(), 5);
+            let base = cache_base();
+            assert!(base.join("abc123/apps.json").is_file());
+            assert!(base.join("abc123/icons/org.signal.png").is_file());
+            let entry = entries_dir().join("ewe-mobile-app-org.signal.desktop");
+            let text = fs::read_to_string(&entry).expect("the launcher entry");
+            assert!(text.contains("Name=Signal\n"));
+            assert!(text.contains("X-Ewe-Mobile-App=abc123\n"));
+            // the cache reads back as the CLI would show it
+            let (back, name, _) = read_cache(&base, "abc123").unwrap();
+            assert_eq!(back, rows);
+            assert_eq!(name, "Pixel 9");
+
+            // a trigger reaches the daemon; a bad key never leaves here
+            trigger(&bus, "abc123", "com.whatsapp").await.unwrap();
+            trigger(&bus, "abc123", "ewe:refresh").await.unwrap();
+            assert!(trigger(&bus, "abc123", "rm -rf /").await.is_err());
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            let log = fs::read_to_string(&trigger_log).unwrap_or_default();
+            assert!(
+                log.contains("com.whatsapp\n") && log.contains("ewe:refresh\n"),
+                "{log:?}"
+            );
+
+            // the list changes on the phone: the signal becomes the event,
+            // and the next sync drops Signal's old friends and their entries
+            Command::new("kill")
+                .args(["-USR1", &pid.to_string()])
+                .status()
+                .unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+            assert!(
+                seen.lock()
+                    .unwrap()
+                    .iter()
+                    .any(|e| e["kind"] == "apps" && e["device"] == "abc123"),
+                "no apps event: {:?}",
+                seen.lock().unwrap()
+            );
+            let (_, rows, _) = sync(&bus, "abc123", "Pixel 9", true).await;
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0].name, "Signal (changed)");
+            assert!(!base.join("abc123/icons/com.whatsapp.png").exists());
+            assert!(!entries_dir()
+                .join("ewe-mobile-app-com.whatsapp.desktop")
+                .exists());
+            assert!(entries_dir()
+                .join("ewe-mobile-app-org.signal.desktop")
+                .is_file());
+
+            // unpaired: everything of it goes
+            prune(&[]);
+            assert!(!base.join("abc123").exists());
+            assert!(!entries_dir()
+                .join("ewe-mobile-app-org.signal.desktop")
+                .exists());
+            assert!(!entries_dir().join("ewe-mobile-screen.desktop").exists());
+            task.abort();
+        });
+        let _ = daemon.kill();
+        let _ = daemon.wait();
+    }
+
     #[test]
     fn packages_and_classes() {
         assert!(package_ok("com.whatsapp"));

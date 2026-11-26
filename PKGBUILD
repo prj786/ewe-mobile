@@ -34,6 +34,12 @@ depends=(
 optdepends=(
   'ewe: the desktop this follows the look of (ewe-theme), and the ewe.phone plugin for the bar'
   'ewe-apps: ewe Files opens the phone’s storage and shows received files'
+  # the Screen and Apps pages: the phone's screen and its apps in windows
+  # here go over adb (Wireless debugging) with scrcpy drawing them. Without
+  # them both pages still work as far as the phone alone allows, and offer
+  # the two through Komble.
+  'android-tools: the debugging link to the phone (adb over Wi-Fi)'
+  'scrcpy: the phone’s screen and its apps as windows on this computer'
 )
 makedepends=('rust' 'cargo' 'nodejs' 'npm')
 

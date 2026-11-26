@@ -1508,6 +1508,7 @@ code {
   .costs {
     margin: 0;
     padding-left: var(--space-md);
+    list-style: disc;
     display: flex;
     flex-direction: column;
     gap: var(--space-xxs);
@@ -1520,8 +1521,8 @@ code {
     margin: 0;
   }
   .apphead__icon {
-    width: var(--icon-md);
-    height: var(--icon-md);
+    width: var(--control-sm);
+    height: var(--control-sm);
     border-radius: var(--slight);
     object-fit: contain;
   }
