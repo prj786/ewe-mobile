@@ -1360,6 +1360,159 @@ code {
   }
 
   /* ── Notifications ───────────────────────────────────────────────────── */
+  .apphead__icon--none {
+    display: inline-grid;
+    place-items: center;
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+  }
+
+  /* ── Apps: a grid of the phone's launcher icons ──────────────────────── */
+  .appgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(3 * var(--control-md)), 1fr));
+    gap: var(--space-xs);
+  }
+  .appcell {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    border-radius: var(--primary);
+  }
+  .appcell:hover,
+  .appcell:focus-within {
+    background: var(--surface-hover);
+  }
+  .appcell__btn {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-s) var(--space-xs);
+    border: 0;
+    border-radius: var(--primary);
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    cursor: pointer;
+    text-align: center;
+    min-width: 0;
+  }
+  .appcell__btn:active {
+    background: var(--surface-pressed);
+  }
+  .appcell__btn:disabled {
+    cursor: default;
+    color: var(--text-disabled);
+  }
+  .appcell__img,
+  .appcell__letter {
+    width: calc(var(--control-lg) + var(--space-s));
+    height: calc(var(--control-lg) + var(--space-s));
+    border-radius: var(--rounded);
+    flex: none;
+  }
+  .appcell__img {
+    object-fit: contain;
+  }
+  .appcell__letter {
+    display: inline-grid;
+    place-items: center;
+    background: var(--accent-subtle);
+    color: var(--accent-text);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+  }
+  .appcell.is-sys .appcell__letter {
+    background: var(--surface-sunken);
+    color: var(--text-secondary);
+  }
+  .appcell__name {
+    width: 100%;
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .appcell__more {
+    position: absolute;
+    top: var(--space-xxs);
+    right: var(--space-xxs);
+    opacity: 0;
+  }
+  .appcell:hover .appcell__more,
+  .appcell:focus-within .appcell__more,
+  .appcell__more:has([aria-expanded="true"]) {
+    opacity: 1;
+  }
+  .appcell__here {
+    position: absolute;
+    top: var(--space-xs);
+    left: var(--space-xs);
+    width: var(--space-s);
+    height: var(--space-s);
+    border-radius: var(--full);
+    background: var(--success);
+  }
+  .appsbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    flex-wrap: wrap;
+  }
+  .appsbar__search {
+    flex: 1 1 calc(10 * var(--control-md));
+  }
+  .appsbar__count {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+  }
+
+  /* ── Screen: steps and the mirror ────────────────────────────────────── */
+  .step__num {
+    display: inline-grid;
+    place-items: center;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    border-radius: var(--full);
+    background: var(--surface-sunken);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    flex: none;
+  }
+  .step.is-done .step__num {
+    background: var(--success-subtle);
+    color: var(--success);
+  }
+  .step.is-now .step__num {
+    background: var(--accent-subtle);
+    color: var(--accent-text);
+  }
+  .codefield {
+    display: flex;
+    gap: var(--space-s);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .codefield .ewe-input {
+    width: calc(6 * var(--control-md));
+  }
+  .codefield .ewe-input > input {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-lg);
+    letter-spacing: 0.2em;
+  }
+  .costs {
+    margin: 0;
+    padding-left: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xxs);
+  }
+
   .apphead {
     display: inline-flex;
     align-items: center;

@@ -17,6 +17,8 @@ export const PAGES = [
   { id: "notifications", label: "Notifications", icon: "bell", needs: ["notifications"] },
   { id: "media", label: "Media", icon: "music", needs: ["mprisremote"] },
   { id: "files", label: "Files", icon: "folder", needs: ["share", "sftp"] },
+  { id: "screen", label: "Screen", icon: "screenShare" },
+  { id: "apps", label: "Apps", icon: "grid" },
   { id: "remote", label: "Remote", icon: "touchpad", needs: ["remotecontrol", "remotekeyboard"] },
   { id: "devices", label: "Devices", icon: "devices" }
 ];
@@ -57,7 +59,14 @@ export const app = $state({
   received: [], // files the phone sent while the window was open
   keyboard: false, // the phone says it takes keys (its accessibility service, or its keyboard, is on)
   keyAcks: 0, // keys the phone said it typed, counted
-  call: null // { event, number, name }
+  call: null, // { event, number, name }
+
+  // the phone's apps (C1 live, C2 cached, or scrcpy's list as the fallback)
+  apps: { source: "", list: [], ready: false, updated: 0, fallback: false, error: "" },
+  adb: null, // the debugging link: { tools: { adb, scrcpy }, paired, connected, serial, model, services }
+  adbAt: 0,
+  windows: [], // scrcpy windows this app opened: { class, title, package }
+  launcherApps: true // "Show the phone's apps in the launcher"
 });
 
 const current = $derived(app.devices.find((d) => d.id === app.deviceId) ?? null);
@@ -123,6 +132,22 @@ export const view = {
   pendingFor(thread, compose) {
     const key = compose ? addressesKey(compose.addresses) : null;
     return app.pending.filter((p) => (thread != null && p.thread === thread) || (key && p.key === key));
+  },
+  /** the launcher icon of a phone app, from its list (C2), or "" */
+  appIcon(pkg) {
+    if (!pkg) return "";
+    return app.apps.list.find((a) => a.package === pkg)?.icon ?? "";
+  },
+  /** is the debugging link up — can an app open in its own window here? */
+  get adbReady() {
+    return !!app.adb?.connected;
+  },
+  /** the phone runs ewe Mobile for Android (it sent its apps list) */
+  get eweOnPhone() {
+    return app.apps.source === "phone";
+  },
+  get mirroring() {
+    return app.windows.some((w) => w.class === "ewe-mobile-screen");
   }
 };
 
@@ -227,6 +252,9 @@ export function resetDevice() {
   app.keyboard = false;
   app.keyAcks = 0;
   app.call = null;
+  app.apps = { source: "", list: [], ready: false, updated: 0, fallback: false, error: "" };
+  app.adb = null;
+  app.adbAt = 0;
 }
 
 /** read everything the chosen phone offers (called when it becomes usable) */
@@ -242,6 +270,169 @@ export function loadDevice() {
   if (view.can("mprisremote")) loadMedia();
   if (view.can("sftp")) loadStorage();
   if (view.can("remotekeyboard")) loadKeyboard();
+  loadApps(); // live now: the cache was read while it was away
+}
+
+// ── the phone's apps, and the debugging link ────────────────────────────────
+
+export async function loadApps() {
+  const id = app.deviceId;
+  if (!id) return;
+  try {
+    const r = await api.apps(id);
+    if (id !== app.deviceId) return;
+    // the scrcpy list stays while the phone has none of its own
+    if (r.source === "none" && app.apps.fallback && app.apps.list.length) {
+      app.apps.ready = true;
+      return;
+    }
+    app.apps = { source: r.source, list: r.apps || [], ready: true, updated: r.updated || 0, fallback: false, error: "" };
+  } catch (e) {
+    if (id === app.deviceId) app.apps = { ...app.apps, ready: true, error: String(e?.message ?? e) };
+  }
+}
+
+let appsTimer = null;
+function appsSoon() {
+  clearTimeout(appsTimer);
+  appsTimer = setTimeout(loadApps, 300);
+}
+
+/** ask the phone for its list again (C1 `ewe:refresh`); the event brings it */
+export async function refreshApps() {
+  try {
+    await api.appsRefresh(app.deviceId);
+    toast("Asked the phone for its apps");
+  } catch (e) {
+    fail(e, "Couldn’t ask the phone for its apps.");
+  }
+}
+
+/** the fallback: what scrcpy lists (no icons; 12 s the first time) */
+export async function loadScrcpyApps(refresh = false) {
+  const id = app.deviceId;
+  app.apps = { ...app.apps, ready: false, error: "" };
+  try {
+    const r = await api.appsScrcpy(id, refresh);
+    if (id !== app.deviceId) return;
+    app.apps = { source: "scrcpy", list: r.apps || [], ready: true, updated: r.updated || 0, fallback: true, error: "" };
+  } catch (e) {
+    if (id === app.deviceId) app.apps = { ...app.apps, ready: true, error: String(e?.message ?? e) };
+  }
+}
+
+/** open an app: here (its own window), on the phone, or wherever it can */
+export async function openApp(a, where = "auto") {
+  try {
+    const went = await api.appOpen(app.deviceId, a.package, a.name, where);
+    if (went === "here") {
+      toast(`Opening **${a.name}** in its own window…`);
+      setTimeout(loadWindows, 1500);
+    } else toast(`**${a.name}** opened on ${current?.name ?? "the phone"}`, "success");
+    return went;
+  } catch (e) {
+    fail(e, `Couldn’t open ${a.name}.`);
+    return "";
+  }
+}
+
+export async function loadAdb() {
+  const id = app.deviceId;
+  if (!id) return;
+  try {
+    const st = await api.adbStatus(id);
+    if (id === app.deviceId) {
+      app.adb = st;
+      app.adbAt = Date.now();
+    }
+  } catch (e) {
+    if (id === app.deviceId) app.adb = { tools: { adb: false, scrcpy: false }, paired: false, connected: false, error: String(e?.message ?? e) };
+  }
+}
+
+export async function pairAdb(host, port, code) {
+  try {
+    await api.adbPair(host, port, code);
+    toast("Paired with the phone for debugging", "success");
+    await loadAdb();
+    return true;
+  } catch (e) {
+    fail(e, "The phone didn’t take the code.");
+    return false;
+  }
+}
+
+export async function connectAdb(host, port) {
+  try {
+    await api.adbConnect(host, port);
+    await loadAdb();
+    return true;
+  } catch (e) {
+    fail(e, "Couldn’t connect to the phone.");
+    return false;
+  }
+}
+
+export async function offerTools() {
+  try {
+    if (!(await api.toolsOffer())) toast("Komble isn’t installed. Install android-tools and scrcpy with pacman.", "warning");
+  } catch (e) {
+    fail(e, "Couldn’t open Komble.");
+  }
+}
+
+export async function loadWindows() {
+  try {
+    const st = await api.windowsState();
+    app.windows = st.windows || [];
+    for (const d of st.died || []) {
+      if (!d.ok || d.words) toast(`**${d.title}** closed${d.words ? `: ${d.words}` : "."}`, d.ok ? "info" : "warning");
+    }
+  } catch {
+    /* the page keeps what it had */
+  }
+}
+
+export async function startScreen(opts) {
+  try {
+    await api.screenStart(app.deviceId, opts);
+    toast(`Mirroring **${current?.name ?? "the phone"}** in its own window`, "success");
+    setTimeout(loadWindows, 800);
+    return true;
+  } catch (e) {
+    fail(e, "Couldn’t start the mirror.");
+    return false;
+  }
+}
+
+export async function stopWindow(cls) {
+  try {
+    await api.windowStop(cls);
+  } catch {
+    /* it may have closed by itself */
+  }
+  app.windows = app.windows.filter((w) => w.class !== cls);
+  loadWindows();
+}
+
+export async function loadLauncherSetting() {
+  try {
+    app.launcherApps = !!(await api.launcherSetting());
+  } catch {
+    /* the default (on) stands */
+  }
+}
+
+export async function setLauncherApps(on) {
+  const was = app.launcherApps;
+  app.launcherApps = on;
+  try {
+    await api.setLauncherSetting(on);
+    toast(on ? "The phone’s apps show in the launcher" : "The phone’s apps are hidden from the launcher", "success");
+  } catch (e) {
+    app.launcherApps = was;
+    fail(e, "Couldn’t change that setting.");
+  }
 }
 
 // ── notifications ───────────────────────────────────────────────────────────
@@ -799,6 +990,9 @@ export function onEvent(ev) {
       break;
     case "media":
       if (mine) mediaSoon();
+      break;
+    case "apps":
+      if (mine) appsSoon();
       break;
     case "storage":
       if (mine) app.storage.mounted = !!ev.mounted;
