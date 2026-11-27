@@ -25,6 +25,7 @@ mod bus;
 mod contacts;
 mod events;
 mod kdc;
+mod pointer;
 mod screen;
 mod tools;
 
@@ -93,8 +94,9 @@ fn show_main(app: &AppHandle) {
         .center()
         .decorations(false)
         .build();
-    if let Err(e) = built {
-        eprintln!("ewe-mobile: could not open the window: {e}");
+    match built {
+        Ok(w) => pointer::forget_hover_on_leave(&w),
+        Err(e) => eprintln!("ewe-mobile: could not open the window: {e}"),
     }
 }
 
