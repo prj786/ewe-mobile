@@ -12,8 +12,8 @@ pkgname=ewe-mobile
 # The archive is addressed by the TAG and extracts to <repo>-<tag without the
 # leading v>, so the source URL and the directory below follow _tag, never
 # pkgver. The release workflow rewrites both.
-_tag=v0.2.0-beta
-pkgver=0.2.0beta
+_tag=v0.2.1-beta
+pkgver=0.2.1beta
 pkgrel=1
 pkgdesc="ewe Mobile — your phone on your desktop: messages, contacts, notifications, media and files"
 arch=('x86_64' 'aarch64')
