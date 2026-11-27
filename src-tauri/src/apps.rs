@@ -952,7 +952,7 @@ mod tests {
             assert_eq!(
                 pk,
                 [
-                    "ge.bog.mobilebank",
+                    "com.alderbank.mobile",
                     "com.android.settings",
                     "org.signal",
                     "com.webp",
@@ -973,7 +973,7 @@ mod tests {
                 .is_some());
             assert!(list
                 .iter()
-                .find(|a| a.package == "ge.bog.mobilebank")
+                .find(|a| a.package == "com.alderbank.mobile")
                 .unwrap()
                 .icon
                 .is_none());

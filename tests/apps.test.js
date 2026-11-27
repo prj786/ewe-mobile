@@ -5,7 +5,7 @@ import { filterApps, letterOf, packageOf, readWhen } from "../src/lib/apps.js";
 const LIST = [
   { package: "com.whatsapp", name: "WhatsApp", sys: false },
   { package: "com.android.settings", name: "Settings", sys: true },
-  { package: "ge.bog.mobilebank", name: "Bank of Georgia", sys: false },
+  { package: "com.alderbank.mobile", name: "Alder Bank", sys: false },
   { package: "org.mozilla.firefox", name: "Firefox", sys: false },
   { package: "com.example.accent", name: "Élève", sys: false }
 ];
@@ -17,8 +17,8 @@ test("an empty query is the whole list", () => {
 
 test("search by name: every word, any case, accents folded", () => {
   assert.deepEqual(filterApps(LIST, "whats").map((a) => a.package), ["com.whatsapp"]);
-  assert.deepEqual(filterApps(LIST, "bank georgia").map((a) => a.package), ["ge.bog.mobilebank"]);
-  assert.deepEqual(filterApps(LIST, "georgia bank").map((a) => a.package), ["ge.bog.mobilebank"]);
+  assert.deepEqual(filterApps(LIST, "bank alder").map((a) => a.package), ["com.alderbank.mobile"]);
+  assert.deepEqual(filterApps(LIST, "alder bank").map((a) => a.package), ["com.alderbank.mobile"]);
   assert.deepEqual(filterApps(LIST, "ele").map((a) => a.package), ["com.example.accent"]);
   assert.deepEqual(filterApps(LIST, "nothing here"), []);
 });
@@ -26,7 +26,7 @@ test("search by name: every word, any case, accents folded", () => {
 test("search by package when the query has a dot, and by a package part", () => {
   assert.deepEqual(filterApps(LIST, "org.mozilla").map((a) => a.package), ["org.mozilla.firefox"]);
   assert.deepEqual(filterApps(LIST, "mozilla").map((a) => a.package), ["org.mozilla.firefox"]);
-  assert.deepEqual(filterApps(LIST, "bog").map((a) => a.package), ["ge.bog.mobilebank"]);
+  assert.deepEqual(filterApps(LIST, "alderbank").map((a) => a.package), ["com.alderbank.mobile"]);
 });
 
 test("the letter of an app without an icon", () => {

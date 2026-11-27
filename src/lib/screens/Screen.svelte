@@ -212,7 +212,7 @@
               <ul class="costs">
                 <li><strong>Developer options</strong> and <strong>Wireless debugging</strong> on the phone.</li>
                 <li>A computer paired this way <strong>can do anything</strong> on the phone that you can. Pair only your own.</li>
-                <li>Some banking apps refuse to run while Developer options is on — TBC and Liberty do, Bank of Georgia doesn’t. Switch Developer options off when you need them.</li>
+                <li>Some banking apps refuse to run while Developer options is on. Switch Developer options off when you need them.</li>
               </ul>
             </span>
           </div>

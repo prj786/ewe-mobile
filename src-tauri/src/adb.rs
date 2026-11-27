@@ -118,7 +118,7 @@ pub struct Service {
 /// `adb mdns services`:
 /// ```text
 /// List of discovered mdns services
-/// adb-58231FDCQ001AX-UVeQ4f    _adb-tls-connect._tcp    192.168.1.5:39855
+/// adb-0A1B2C3D4E5F6G-AbCdEf    _adb-tls-connect._tcp    192.168.1.5:39855
 /// ```
 pub fn parse_services(text: &str) -> Vec<Service> {
     let mut out = Vec::new();
@@ -188,7 +188,7 @@ pub struct Device {
 
 /// ```text
 /// List of devices attached
-/// adb-58231FDCQ001AX-UVeQ4f._adb-tls-connect._tcp device product:frankel model:Pixel_10_Pro_XL device:frankel transport_id:3
+/// adb-0A1B2C3D4E5F6G-AbCdEf._adb-tls-connect._tcp device product:komodo model:Pixel_9_Pro_XL device:komodo transport_id:3
 /// ```
 pub fn parse_devices(text: &str) -> Vec<Device> {
     let mut out = Vec::new();
@@ -260,8 +260,8 @@ pub fn parse_connect(out: &Out) -> Result<(), String> {
         .to_string())
 }
 
-/// Letters and digits only, lower-case: how "Pixel 10 Pro XL" and
-/// `Pixel_10_Pro_XL` become the same word.
+/// Letters and digits only, lower-case: how "Pixel 9 Pro XL" and
+/// `Pixel_9_Pro_XL` become the same word.
 fn squash(s: &str) -> String {
     s.chars()
         .filter(char::is_ascii_alphanumeric)
@@ -736,8 +736,8 @@ mod tests {
     use super::*;
 
     const SERVICES: &str = "List of discovered mdns services\n\
-        adb-58231FDCQ001AX-UVeQ4f\t_adb-tls-connect._tcp\t192.168.1.5:39855\n\
-        adb-58231FDCQ001AX-UVeQ4f\t_adb-tls-pairing._tcp\t192.168.1.5:41021\n\
+        adb-0A1B2C3D4E5F6G-AbCdEf\t_adb-tls-connect._tcp\t192.168.1.5:39855\n\
+        adb-0A1B2C3D4E5F6G-AbCdEf\t_adb-tls-pairing._tcp\t192.168.1.5:41021\n\
         other-thing\t_googlecast._tcp\t192.168.1.9:8009\n\
         bad line\n\
         evil$name\t_adb-tls-connect._tcp\t192.168.1.7:1\n\
@@ -750,7 +750,7 @@ mod tests {
         assert_eq!(
             s[0],
             Service {
-                name: "adb-58231FDCQ001AX-UVeQ4f".into(),
+                name: "adb-0A1B2C3D4E5F6G-AbCdEf".into(),
                 kind: "connect".into(),
                 host: "192.168.1.5".into(),
                 port: 39855
@@ -767,21 +767,21 @@ mod tests {
         let d = parse_devices(
             "* daemon not running; starting now at tcp:5037\n* daemon started successfully\n\
              List of devices attached\n\
-             adb-58231FDCQ001AX-UVeQ4f._adb-tls-connect._tcp device product:frankel model:Pixel_10_Pro_XL device:frankel transport_id:3\n\
+             adb-0A1B2C3D4E5F6G-AbCdEf._adb-tls-connect._tcp device product:komodo model:Pixel_9_Pro_XL device:komodo transport_id:3\n\
              192.168.1.20:5555      offline transport_id:4\n\
              emulator-5554          device product:sdk_gphone64 model:sdk_gphone64_x86_64 device:emu64x transport_id:5\n",
         );
         assert_eq!(d.len(), 3);
-        assert_eq!(d[0].model, "Pixel_10_Pro_XL");
+        assert_eq!(d[0].model, "Pixel_9_Pro_XL");
         assert_eq!(d[1].state, "offline");
-        let m = match_device(&d, "Pixel 10 Pro XL").unwrap();
-        assert!(m.serial.starts_with("adb-58231"));
+        let m = match_device(&d, "Pixel 9 Pro XL").unwrap();
+        assert!(m.serial.starts_with("adb-0A1B2"));
         // an unknown name with two ready devices: nobody
         assert!(match_device(&d, "My phone").is_none());
         // one ready device and no name match: the only one
         assert_eq!(
             match_device(&d[..2], "Whatever").unwrap().model,
-            "Pixel_10_Pro_XL"
+            "Pixel_9_Pro_XL"
         );
         assert!(
             match_device(&d[1..2], "x").is_none(),
@@ -793,11 +793,11 @@ mod tests {
     #[test]
     fn pair_and_connect_answers() {
         let ok = Out {
-            stdout: "Successfully paired to 192.168.1.5:41021 [guid=adb-58231FDCQ001AX-UVeQ4f]\n"
+            stdout: "Successfully paired to 192.168.1.5:41021 [guid=adb-0A1B2C3D4E5F6G-AbCdEf]\n"
                 .into(),
             stderr: String::new(),
         };
-        assert_eq!(parse_pair(&ok).unwrap(), "adb-58231FDCQ001AX-UVeQ4f");
+        assert_eq!(parse_pair(&ok).unwrap(), "adb-0A1B2C3D4E5F6G-AbCdEf");
         let bad = Out {
             stdout: "Failed: Unable to start pairing client.\n".into(),
             stderr: String::new(),
@@ -839,8 +839,8 @@ mod tests {
         assert!(!host_ok("-x"));
         assert!(!host_ok("a b"));
         assert!(!host_ok("x;rm"));
-        let hosts = b"\n\x1badb-58231FDCQ001AX-UVeQ4f\x12\x00".to_vec();
-        assert!(is_known(&hosts, "adb-58231FDCQ001AX-UVeQ4f"));
+        let hosts = b"\n\x1badb-0A1B2C3D4E5F6G-AbCdEf\x12\x00".to_vec();
+        assert!(is_known(&hosts, "adb-0A1B2C3D4E5F6G-AbCdEf"));
         assert!(!is_known(&hosts, "adb-OTHER"));
         assert!(!is_known(&hosts, ""));
     }
@@ -853,9 +853,9 @@ mod tests {
             stay_awake: true,
             quality: "low".into(),
         };
-        let a = screen_args("adb-X._adb-tls-connect._tcp", "Pixel 10 Pro XL", &o);
+        let a = screen_args("adb-X._adb-tls-connect._tcp", "Pixel 9 Pro XL", &o);
         assert_eq!(a[0], "--serial=adb-X._adb-tls-connect._tcp");
-        assert_eq!(a[1], "--window-title=Pixel 10 Pro XL");
+        assert_eq!(a[1], "--window-title=Pixel 9 Pro XL");
         assert!(a.contains(&"--turn-screen-off".to_string()));
         assert!(a.contains(&"--stay-awake".to_string()));
         assert!(a.contains(&"--no-audio".to_string()));
@@ -897,7 +897,7 @@ mod tests {
 
     #[test]
     fn screen_state() {
-        // the owner's phone asleep on the desk (Pixel 10 Pro XL, Android 17)
+        // a phone asleep on the desk (a Pixel on Android 17)
         assert_eq!(
             parse_screen_state(
                 "  mWakefulness=Dozing\nmWakefulness=3\n    isKeyguardShowing=true\n"
@@ -931,7 +931,7 @@ mod tests {
             "INFO: Connected to adb\nList of apps:\n \
              - Calculator                        com.google.android.calculator\n \
              * Settings                          com.android.settings\n \
-             - Bank of Georgia  mBank            ge.bog.mobilebank\n \
+             - Alder Bank  mBank                 com.alderbank.mobile\n \
              - Broken line\n \
              - Evil                              not a package!\n",
         );
@@ -939,8 +939,8 @@ mod tests {
         assert_eq!(
             l[0],
             (
-                "Bank of Georgia mBank".into(),
-                "ge.bog.mobilebank".into(),
+                "Alder Bank mBank".into(),
+                "com.alderbank.mobile".into(),
                 false
             )
         );
