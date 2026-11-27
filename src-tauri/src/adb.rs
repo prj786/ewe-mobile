@@ -542,15 +542,74 @@ pub fn screen_args(serial: &str, title: &str, o: &ScreenOpts) -> Vec<String> {
 /// Arguments for one app in its own window: a virtual display of its own,
 /// resized with the window, no Android bars; `+` stops the app first so one
 /// already open on the phone moves here (the probes, RFC-012 §7).
-pub fn app_args(serial: &str, package: &str, title: &str) -> Vec<String> {
-    vec![
+///
+/// `--keep-active`: the app's display is in the phone's own display group
+/// (Android 17 puts it there), so when the phone falls asleep the window
+/// goes black — scrcpy keeps the phone awake while the window is open.
+/// `dark` (the phone was asleep or locked, see `wake`): its own screen
+/// stays off meanwhile (`--turn-screen-off`), the phone just stays awake.
+pub fn app_args(serial: &str, package: &str, title: &str, dark: bool) -> Vec<String> {
+    let mut a = vec![
         format!("--serial={serial}"),
         "--new-display=1280x800/160".into(),
         "--flex-display".into(),
         "--no-vd-system-decorations".into(),
+        "--keep-active".into(),
+    ];
+    if dark {
+        a.push("--turn-screen-off".into());
+    }
+    a.extend([
         format!("--start-app=+{package}"),
         format!("--window-title={}", title_ok(title)),
-    ]
+    ]);
+    a
+}
+
+/// What the phone's screen is doing, from one `adb shell` (the line below
+/// is a constant: nothing of ours is ever put into the phone's shell):
+/// ```text
+///   mWakefulness=Dozing
+///     isKeyguardShowing=true
+/// ```
+/// `(asleep, locked)`. Asleep = Asleep, Dozing or Dreaming. A phone that
+/// answers neither line reads as awake and unlocked: nothing is done to it.
+pub fn parse_screen_state(text: &str) -> (bool, bool) {
+    let mut asleep = false;
+    let mut locked = false;
+    for l in text.lines().map(str::trim) {
+        if let Some(v) = l.strip_prefix("mWakefulness=") {
+            if matches!(v, "Asleep" | "Dozing" | "Dreaming") {
+                asleep = true;
+            }
+        } else if l == "isKeyguardShowing=true" {
+            locked = true;
+        }
+    }
+    (asleep, locked)
+}
+
+const SCREEN_STATE: &str =
+    "dumpsys power | grep mWakefulness=; dumpsys window | grep isKeyguardShowing";
+
+/// Before an app opens on a display of its own: the phone has to be awake,
+/// or that display is off and the window stays black (the phone asleep on
+/// the desk, 2026-11-27). Wakes it when it sleeps; answers whether its own
+/// screen may stay dark (asleep or locked: nobody is using the phone).
+/// Best effort: when adb cannot tell, nothing is done and the answer is no.
+pub async fn wake(serial: &str) -> bool {
+    let Ok(out) = adb(&["-s", serial, "shell", SCREEN_STATE], QUICK).await else {
+        return false;
+    };
+    let (asleep, locked) = parse_screen_state(&out.stdout);
+    if asleep {
+        let _ = adb(
+            &["-s", serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP"],
+            QUICK,
+        )
+        .await;
+    }
+    asleep || locked
 }
 
 /// Where a scrcpy window's complaints go (the page reads them back when a
@@ -816,7 +875,7 @@ mod tests {
         .iter()
         .any(|x| x.starts_with("--max-size")));
 
-        let a = app_args("s", "com.whatsapp", "WhatsApp");
+        let a = app_args("s", "com.whatsapp", "WhatsApp", false);
         assert_eq!(
             a,
             vec![
@@ -824,12 +883,46 @@ mod tests {
                 "--new-display=1280x800/160",
                 "--flex-display",
                 "--no-vd-system-decorations",
+                "--keep-active",
                 "--start-app=+com.whatsapp",
                 "--window-title=WhatsApp",
             ]
         );
         // every argument is one argv element: nothing is ever joined for a shell
         assert!(a.iter().all(|x| !x.contains('\n')));
+        let d = app_args("s", "com.whatsapp", "WhatsApp", true);
+        assert!(d.contains(&"--turn-screen-off".to_string()));
+        assert!(d.contains(&"--keep-active".to_string()));
+    }
+
+    #[test]
+    fn screen_state() {
+        // the owner's phone asleep on the desk (Pixel 10 Pro XL, Android 17)
+        assert_eq!(
+            parse_screen_state(
+                "  mWakefulness=Dozing\nmWakefulness=3\n    isKeyguardShowing=true\n"
+            ),
+            (true, true)
+        );
+        assert_eq!(
+            parse_screen_state("  mWakefulness=Asleep\n    isKeyguardShowing=false\n"),
+            (true, false)
+        );
+        // awake on the lock screen
+        assert_eq!(
+            parse_screen_state(
+                "  mWakefulness=Awake\nmWakefulness=1\n    isKeyguardShowing=true\n"
+            ),
+            (false, true)
+        );
+        // in someone's hand
+        assert_eq!(
+            parse_screen_state("  mWakefulness=Awake\n    isKeyguardShowing=false\n"),
+            (false, false)
+        );
+        // a phone that says neither: leave it alone
+        assert_eq!(parse_screen_state(""), (false, false));
+        assert_eq!(parse_screen_state("error: closed\n"), (false, false));
     }
 
     #[test]

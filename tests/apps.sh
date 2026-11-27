@@ -65,6 +65,8 @@ verbs() {
   "$bin" --open-app com.whatsapp             > "$work/open-auto.json"
   "$bin" --open-app nope.not.there --phone   > "$work/open-unknown.json"
   "$bin" --open-app 'bad;name' --here        > "$work/open-bad.json"
+  FAKE_ADB_ASLEEP=1 FAKE_ADB_LOG="$work/adb-asleep.log" FAKE_SCRCPY_LOG="$work/scrcpy-asleep.log" \
+    "$bin" --open-app org.signal --here      > "$work/open-asleep.json"
   "$bin" --screen                            > "$work/screen.json"
   "$bin" --apps --device nobody              > "$work/apps-nobody.json"
   busctl --user list --acquired 2>/dev/null | grep -c "^org.kde.kdeconnect " > "$work/owners" || true
@@ -73,7 +75,7 @@ verbs() {
 }
 dbus-run-session -- bash -c "$(declare -f verbs); verbs"
 
-for f in apps adb-status open-phone open-auto open-unknown open-bad screen apps-nobody; do
+for f in apps adb-status open-phone open-auto open-unknown open-bad open-asleep screen apps-nobody; do
   [ "$(wc -l < "$work/$f.json")" -le 1 ] && ok "--${f%%-*} is one line" || bad "--$f is one line: $(cat "$work/$f.json")"
 done
 [ "$(json 'v["ok"] and v["device"]=="abc123" and v["deviceName"]=="Pixel 9" and v["reachable"] and v["adb"] and v["source"]=="phone"' < "$work/apps.json")" = True ] \
@@ -107,6 +109,14 @@ grep -q "^SDL_APP_ID=ewe-mobile-app-com.whatsapp$" "$work/scrcpy.log" && grep -q
   && grep -q "^ARG --new-display=1280x800/160$" "$work/scrcpy.log" && grep -q "^ARG --flex-display$" "$work/scrcpy.log" && grep -q "^ARG --no-vd-system-decorations$" "$work/scrcpy.log" \
   && grep -q "^ARG --window-title=WhatsApp$" "$work/scrcpy.log" && grep -q "^ARG --serial=adb-FAKE0001-abcdef._adb-tls-connect._tcp$" "$work/scrcpy.log" \
   && ok "scrcpy (app): class ewe-mobile-app-com.whatsapp, --start-app=+pkg, its own display, title = app name" || bad "scrcpy app args: $(cat "$work/scrcpy.log")"
+grep -q "^ARG --keep-active$" "$work/scrcpy.log" && ok "scrcpy (app): --keep-active (the phone stays awake, the window never goes black)" || bad "no --keep-active: $(cat "$work/scrcpy.log")"
+grep -q "^adb -s adb-FAKE0001-abcdef._adb-tls-connect._tcp shell dumpsys power" "$work/adb.log" && ok "the phone's screen state asked before the app opens" || bad "no screen-state question: $(cat "$work/adb.log")"
+! grep -q "KEYCODE_WAKEUP" "$work/adb.log" && ! grep -q "^ARG --turn-screen-off$" "$work/scrcpy.log" \
+  && ok "a phone in use is left alone (no wake key, its screen stays on)" || bad "woke or darkened a phone in use: $(grep -h "WAKEUP\|turn-screen-off" "$work/adb.log" "$work/scrcpy.log")"
+[ "$(json 'v["ok"] and v["where"]=="here"' < "$work/open-asleep.json")" = True ] \
+  && grep -q "^adb -s adb-FAKE0001-abcdef._adb-tls-connect._tcp shell input keyevent KEYCODE_WAKEUP$" "$work/adb-asleep.log" \
+  && grep -q "^ARG --keep-active$" "$work/scrcpy-asleep.log" && grep -q "^ARG --turn-screen-off$" "$work/scrcpy-asleep.log" \
+  && ok "the phone asleep: woken first, kept awake, its own screen left dark" || bad "asleep: $(cat "$work/open-asleep.json" "$work/adb-asleep.log" "$work/scrcpy-asleep.log" 2>&1)"
 ! grep -q "kill-server" "$work/adb.log" && ok "a headless verb never kills the adb server" || bad "kill-server from a verb"
 [ "$(cat "$work/owners")" = 1 ] && ok "the stand-in was the only kdeconnect on the private bus" || bad "owners: $(cat "$work/owners")"
 

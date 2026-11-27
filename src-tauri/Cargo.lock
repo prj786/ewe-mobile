@@ -997,7 +997,7 @@ dependencies = [
 
 [[package]]
 name = "ewe-mobile"
-version = "0.2.0-beta"
+version = "0.2.1-beta"
 dependencies = [
  "base64 0.22.1",
  "futures-util",
