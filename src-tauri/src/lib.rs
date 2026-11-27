@@ -82,11 +82,14 @@ fn show_main(app: &AppHandle) {
         let _ = w.set_focus();
         return;
     }
-    // undecorated: Hyprland tiles it and draws the border
+    // undecorated: Hyprland tiles it and draws the border. No minimum size:
+    // Hyprland gives a tiled window the size of its tile whatever the window
+    // asks for, and a window that insists on more is drawn squeezed into the
+    // tile (cropped on a scale-1 screen) while the pointer is not, so every
+    // hover and click lands beside what is drawn. The page takes any size.
     let built = WebviewWindowBuilder::new(app, MAIN, WebviewUrl::default())
         .title("ewe Mobile")
         .inner_size(1040.0, 700.0)
-        .min_inner_size(420.0, 520.0)
         .center()
         .decorations(false)
         .build();
