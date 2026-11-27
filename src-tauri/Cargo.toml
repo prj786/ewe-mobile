@@ -1,6 +1,6 @@
 [package]
 name = "ewe-mobile"
-version = "0.2.1-beta"
+version = "0.2.2-beta"
 description = "ewe Mobile — your phone on your desktop: messages, contacts, notifications, media and files"
 authors = ["scubba"]
 license = "MIT"
@@ -28,6 +28,8 @@ base64 = "0.22"   # pictures as data: URLs (contact photos, album art, app icons
 # same zbus (and its default async-io backend) tauri-plugin-single-instance
 # already brings, so nothing new is compiled for it.
 zbus = "5"
+# the web view's leave event (pointer.rs); the gtk that Tauri itself uses
+gtk = "0.18"
 
 # ewe Mobile is a window over KDE Connect's daemon: it owns no connection to
 # the phone, no pairing keys and no state of its own. Everything it does is a
