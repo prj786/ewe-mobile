@@ -39,7 +39,17 @@ impl Windows {
         child: std::process::Child,
     ) {
         if let Ok(mut w) = self.0.lock() {
-            w.retain(|x| x.class != class);
+            // the same app opened again: the old window is no longer listed,
+            // but its process is still ours to reap (else it stays a zombie)
+            let (gone, keep): (Vec<Win>, Vec<Win>) = std::mem::take(&mut *w)
+                .into_iter()
+                .partition(|x| x.class == class);
+            *w = keep;
+            for mut old in gone {
+                std::thread::spawn(move || {
+                    let _ = old.child.wait();
+                });
+            }
             w.push(Win {
                 class,
                 title,
@@ -256,9 +266,10 @@ async fn open_app(
     };
     if here {
         let serial = adb::serial_for(&name).await?;
+        let dark = adb::wake(&serial).await;
         let child = adb::spawn(
             &apps::app_class(package),
-            &adb::app_args(&serial, package, &title),
+            &adb::app_args(&serial, package, &title, dark),
         )
         .map_err(|e| {
             (

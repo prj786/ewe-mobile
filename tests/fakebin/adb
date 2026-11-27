@@ -17,6 +17,13 @@ case "$1" in
   connect) echo "connected to $2" ;;
   start-server) echo "* daemon started successfully" >&2 ;;
   kill-server) ;;
+  -s)
+    # adb -s <serial> shell …: the screen-state question and the wake key.
+    # FAKE_ADB_ASLEEP=1 answers like the owner's phone asleep on the desk.
+    if [ "$3" = shell ] && [ "$4" = "dumpsys power | grep mWakefulness=; dumpsys window | grep isKeyguardShowing" ]; then
+      if [ -n "${FAKE_ADB_ASLEEP:-}" ]; then printf '  mWakefulness=Dozing\n    isKeyguardShowing=true\n'
+      else printf '  mWakefulness=Awake\n    isKeyguardShowing=false\n'; fi
+    fi ;;
   *) echo "fake adb: $*" >&2 ;;
 esac
 exit 0
