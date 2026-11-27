@@ -149,8 +149,7 @@ the windows. Both are optional packages (`android-tools`, `scrcpy`); when
 they are missing the Screen page hands them to Komble. The Screen page
 says what the link costs before it asks for anything: developer options,
 a paired computer that can do anything on the phone, and the banking apps
-that refuse while developer options is on (TBC and Liberty do; Bank of
-Georgia does not).
+that refuse to run while developer options is on (some do).
 
 - **C1**: ewe Mobile for Android announces the launchable apps as its
   `remotecommands` command list — a JSON object with an `"ewe"` marker and
@@ -192,7 +191,7 @@ ewe-mobile --status        {"ok":true,"installed":…,"running":…,"devices":[�
 ewe-mobile --version       {"ok":true,"name":"ewe-mobile","product":"ewe Mobile","version":"…"}
 
 ewe-mobile --apps [--device <id>]
-    {"ok":true,"device":"<id>","deviceName":"Pixel 10 Pro XL","reachable":true,"adb":true,
+    {"ok":true,"device":"<id>","deviceName":"Pixel 9 Pro XL","reachable":true,"adb":true,
      "source":"phone|cache|none","updated":1764170000000,
      "apps":[{"package":"com.whatsapp","name":"WhatsApp","sys":false,"icon":"/home/u/.cache/ewe-mobile/<id>/icons/com.whatsapp.png"}]}
 ewe-mobile --open-app <package> [--here|--phone] [--device <id>]
@@ -200,10 +199,10 @@ ewe-mobile --open-app <package> [--here|--phone] [--device <id>]
     {"ok":true,"package":"com.whatsapp","where":"phone","class":null,"pid":null}
     --here: its own window here (needs adb); --phone: on the phone's screen (C1); neither: here when adb is connected, else phone
 ewe-mobile --screen [--device <id>]
-    {"ok":true,"class":"ewe-mobile-screen","title":"Pixel 10 Pro XL","pid":1234}
+    {"ok":true,"class":"ewe-mobile-screen","title":"Pixel 9 Pro XL","pid":1234}
 ewe-mobile --adb-status [--device <id>]
     {"ok":true,"tools":{"adb":true,"scrcpy":true,"packages":["android-tools","scrcpy"]},"paired":true,"connected":true,
-     "serial":"adb-…._adb-tls-connect._tcp","model":"Pixel 10 Pro XL","services":[{"name":"adb-…","kind":"connect","host":"192.168.1.5","port":39855}],"devices":[…]}
+     "serial":"adb-…._adb-tls-connect._tcp","model":"Pixel 9 Pro XL","services":[{"name":"adb-…","kind":"connect","host":"192.168.1.5","port":39855}],"devices":[…]}
 
 a failure: {"ok":false,"error":"no-device|away|no-adb-tools|adb-not-paired|adb-not-connected|unknown-app|scrcpy-failed","message":"<words>"}
 ```

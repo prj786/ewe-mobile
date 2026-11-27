@@ -150,7 +150,7 @@ export function install(params) {
     ["com.instagram.android", "Instagram", "#e1306c", "I"], ["com.google.android.youtube", "YouTube", "#ff0000", "▶"],
     ["com.spotify.music", "Spotify", "#1db954", "S"], ["com.google.android.apps.maps", "Maps", "#34a853", "M"],
     ["com.google.android.gm", "Gmail", "#ea4335", "G"], ["com.google.android.calendar", "Calendar", "#1a73e8", "31"],
-    ["ge.bog.mobilebank", "Bank of Georgia", "#ff5b00", "B"], ["ge.tbc.mobilebank", "TBC", "#00a3e0", "T"],
+    ["com.alderbank.mobile", "Alder Bank", "#ff5b00", "A"], ["com.hillbank.mobile", "Hill Bank", "#00a3e0", "H"],
     ["com.google.android.apps.photos", "Photos", "#fbbc04", "P"], ["com.android.chrome", "Chrome", "#4285f4", "C"],
     ["org.mozilla.firefox", "Firefox", "#ff7139", "F"], ["com.google.android.keep", "Keep", "#f9ab00", "K"],
     ["com.google.android.calculator", "Calculator", "#5f6368", "="], ["com.android.camera2", "Camera", "#202124", "◉"],
@@ -175,9 +175,9 @@ export function install(params) {
   const adbStatus = () => {
     const tools = adbMode === "none" ? { adb: false, scrcpy: false } : { adb: true, scrcpy: true };
     const services = [];
-    if (["seen", "pairing", "paired", "connected"].includes(adbMode)) services.push({ name: "adb-58231FDCQ001AX-UVeQ4f", kind: "connect", host: "192.168.1.5", port: 39855 });
-    if (adbMode === "pairing" && !paired) services.push({ name: "adb-58231FDCQ001AX-UVeQ4f", kind: "pairing", host: "192.168.1.5", port: 41021 });
-    return { ok: true, tools, paired, connected, serial: connected ? "adb-58231FDCQ001AX-UVeQ4f._adb-tls-connect._tcp" : "", model: connected ? "Pixel 9" : "", services, devices: [] };
+    if (["seen", "pairing", "paired", "connected"].includes(adbMode)) services.push({ name: "adb-0A1B2C3D4E5F6G-AbCdEf", kind: "connect", host: "192.168.1.5", port: 39855 });
+    if (adbMode === "pairing" && !paired) services.push({ name: "adb-0A1B2C3D4E5F6G-AbCdEf", kind: "pairing", host: "192.168.1.5", port: 41021 });
+    return { ok: true, tools, paired, connected, serial: connected ? "adb-0A1B2C3D4E5F6G-AbCdEf._adb-tls-connect._tcp" : "", model: connected ? "Pixel 9" : "", services, devices: [] };
   };
   let selfName = "ewe-laptop";
   const enabled = new Map();
@@ -380,7 +380,7 @@ export function install(params) {
       if (code !== "123456") throw new Error("The phone refused the code. Read the six digits again — each attempt gets a new code.");
       paired = true;
       later(1500, () => (connected = true));
-      return "adb-58231FDCQ001AX-UVeQ4f";
+      return "adb-0A1B2C3D4E5F6G-AbCdEf";
     },
     adb_connect: () => {
       connected = true;

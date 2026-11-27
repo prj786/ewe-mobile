@@ -88,7 +88,7 @@ $XDG_CACHE_HOME/ewe-mobile/<deviceId>/icons/<package>.png
 ```
 
 ```json
-{ "v": 1, "device": "<id>", "deviceName": "Pixel 10 Pro XL", "updated": 1764170000000,
+{ "v": 1, "device": "<id>", "deviceName": "Pixel 9 Pro XL", "updated": 1764170000000,
   "apps": [ { "package": "com.whatsapp", "name": "WhatsApp", "sys": false,
               "icon": "/home/u/.cache/ewe-mobile/<id>/icons/com.whatsapp.png" } ] }
 ```
@@ -225,14 +225,14 @@ marking in Quick settings' notification list.
 | S2 | done, 4 commits, 1.2.0: dock item + popup (Apps, Files), bridge C1→C2, C6 hide (`hide_kdeconnect`), wording. `test.sh` 28/28 | `ewe-plugin-phone` · `feat/dock-apps` |
 | eep | `X-Eep-Skip=true` → no card (66f6f72) | `eep` · `feat/skip-mark` (worktree `.wt/eep-skip`; eep's main checkout has someone else's uncommitted work on `feat/add-appimage-meta` — leave it) |
 
-**On the phone (2026-11-26, 19:10–19:20, Pixel 10 Pro XL, Android 17), all passed:** the merged build
+**On the phone (2026-11-26, 19:10–19:20, a Pixel on Android 17), all passed:** the merged build
 (b2-ewe-face 0c0999a9) installed over the old one, pairing and the accessibility service kept; the C1 list
 reached kdeconnectd — 82 launchable apps (31 system), 604 KB, icons 96 px, rounded (`scripts/apps-dump.py`);
 `triggerCommand(com.google.android.calculator)` opened Calculator on the phone (background start through the
 accessibility service, unlocked phone); `ewe-mobile --adb-status` picked the phone over the emulator;
 `--apps` wrote C2 (82 icons); `--open-app … --here` gave a resizable window, class
 `ewe-mobile-app-com.google.android.calculator`, title "Calculator"; `--screen` → class `ewe-mobile-screen`,
-title "Pixel 10 Pro XL" (tiled on the live session — the float rule is on the shell branch); phone
+title = the phone's name (tiled on the live session — the float rule is on the shell branch); phone
 notifications now carry the app's launcher icon (Messenger, Messages, Wallet, Instagram, Weather, Calendar —
 no initials). The stock app is **uninstalled** from the phone; the PC lists one paired phone (`ab38d75f…`).
 

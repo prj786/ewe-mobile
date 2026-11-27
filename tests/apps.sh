@@ -80,7 +80,7 @@ for f in apps adb-status open-phone open-auto open-unknown open-bad open-asleep 
 done
 [ "$(json 'v["ok"] and v["device"]=="abc123" and v["deviceName"]=="Pixel 9" and v["reachable"] and v["adb"] and v["source"]=="phone"' < "$work/apps.json")" = True ] \
   && ok "--apps: the phone, in reach, adb connected, list from the phone" || bad "--apps: $(cat "$work/apps.json")"
-[ "$(json '[a["package"] for a in v["apps"]]' < "$work/apps.json")" = "['ge.bog.mobilebank', 'com.android.settings', 'org.signal', 'com.webp', 'com.whatsapp']" ] \
+[ "$(json '[a["package"] for a in v["apps"]]' < "$work/apps.json")" = "['com.alderbank.mobile', 'com.android.settings', 'org.signal', 'com.webp', 'com.whatsapp']" ] \
   && ok "--apps: five apps, sorted by name, the hostile key dropped (a bad icon costs only the icon)" || bad "--apps packages: $(json '[a["package"] for a in v["apps"]]' < "$work/apps.json")"
 icon="$(json '[a["icon"] for a in v["apps"] if a["package"]=="com.whatsapp"][0]' < "$work/apps.json")"
 [ "$icon" = "$XDG_CACHE_HOME/ewe-mobile/abc123/icons/com.whatsapp.png" ] && [ -s "$icon" ] && ok "--apps: C2 icon path, file written" || bad "--apps icon: $icon"
