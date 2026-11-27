@@ -23,6 +23,7 @@ mod adb;
 mod apps;
 mod bus;
 mod contacts;
+mod crash;
 mod events;
 mod kdc;
 mod pointer;
@@ -101,6 +102,7 @@ fn show_main(app: &AppHandle) {
 }
 
 pub fn run() {
+    crash::log_panics();
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|a| a == "--version" || a == "-V") {
         println!("{}", tools::version_json());
